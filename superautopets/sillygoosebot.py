@@ -11,6 +11,16 @@ bot_battle = BotBattle()
 # Each iteration you will be expected to make one move
 prev_round_num = 0
 
+
+def sillyOuput(game_info):
+    printable = "Next Opponent info\n"
+
+    for line in repr(game_info.next_opponent_info).splitlines():
+            printable += f"        {line}\n"
+
+
+
+
 while True:
     # This function will pause until the game engine
     # is ready for you to make a move. Always call it
@@ -19,9 +29,9 @@ while True:
     game_info = bot_battle.get_game_info()
     print(game_info.remaining_moves)
 
-    # Feel free to uncomment these lines if you want to inspect the info!
-    print(game_info, flush = True)
-    print("", flush = True)
+    sillyOuput(game_info)
+    #           print(game_info, flush = True)
+    #           print("", flush = True)
 
     # How to detect whether it is a new round
     new_round = prev_round_num != game_info.round_num
