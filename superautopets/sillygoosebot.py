@@ -13,10 +13,40 @@ prev_round_num = 0
 
 
 def sillyOuput(game_info):
-    printable = "Next Opponent info\n"
+    player = game_info.player_info
+    nextOpponent = game_info.next_opponent_info
 
-    for line in repr(game_info.next_opponent_info).splitlines():
-            printable += f"        {line}\n"
+    printable = "Player Info:\n"
+
+    printable += f"Health: {player.health}"
+
+    for i, pet in enumerate(player.pets):
+        printable += f"\nPet {i}: "
+        if pet != None:
+            printable += printPet(pet)
+
+
+    printable += "\n\n"
+
+    printable += "Next Opponent Info:"
+
+    for i, pet in enumerate(nextOpponent.pets):
+        printable += f"\nPet {i}: "
+        if pet != None:
+            printable += printPet(pet)
+
+    printable += "\n\n"
+
+    printable += "Additional Comments:\n"
+
+    print(printable, flush=True)
+
+def printPet(pet):
+    printable = str(pet.type)[8:]
+    printable += f", H/A: {pet.health}/{pet.attack}"
+    printable += f", Level: {pet.level}"
+    printable += f", Food: {str(pet.carried_food)[9:]}"
+    return printable
 
 
 
@@ -27,16 +57,17 @@ while True:
     # before making a move. It provides the information
     # required to make a sensible move
     game_info = bot_battle.get_game_info()
-    print(game_info.remaining_moves)
 
-    sillyOuput(game_info)
+    #           print(game_info.remaining_moves)
     #           print(game_info, flush = True)
     #           print("", flush = True)
 
     # How to detect whether it is a new round
     new_round = prev_round_num != game_info.round_num
     if new_round:
-        print(f"Round {game_info.round_num}\n\n")
+        
+        print(f"\nRound #{game_info.round_num}\n")
+        sillyOuput(game_info)
         prev_round_num = game_info.round_num
 
     # Now let's go through a very simple (and poorly written!)
