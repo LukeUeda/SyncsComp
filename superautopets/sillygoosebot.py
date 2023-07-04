@@ -6,7 +6,7 @@ from submissionhelper.info.foodtype import FoodType
 # Core class for the submission helper
 # Use this to make moves and get game info
 bot_battle = BotBattle()
-
+#awedaedcadwdawdadwaddwda
 # Core game loop
 # Each iteration you will be expected to make one move
 prev_round_num = 0
