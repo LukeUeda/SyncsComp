@@ -11,22 +11,63 @@ bot_battle = BotBattle()
 # Each iteration you will be expected to make one move
 prev_round_num = 0
 
+
+def sillyOuput(game_info):
+    player = game_info.player_info
+    nextOpponent = game_info.next_opponent_info
+
+    printable = "Player Info:\n"
+
+    printable += f"Health: {player.health}"
+
+    for i, pet in enumerate(player.pets):
+        printable += f"\nPet {i}: "
+        if pet != None:
+            printable += printPet(pet)
+
+
+    printable += "\n\n"
+
+    printable += "Next Opponent Info:"
+
+    for i, pet in enumerate(nextOpponent.pets):
+        printable += f"\nPet {i}: "
+        if pet != None:
+            printable += printPet(pet)
+
+    printable += "\n\n"
+
+    printable += "Additional Comments:\n"
+
+    print(printable, flush=True)
+
+def printPet(pet):
+    printable = str(pet.type)[8:]
+    printable += f", H/A: {pet.health}/{pet.attack}"
+    printable += f", Level: {pet.level}"
+    printable += f", Food: {str(pet.carried_food)[9:]}"
+    return printable
+
+
+
+
 while True:
     # This function will pause until the game engine
     # is ready for you to make a move. Always call it
     # before making a move. It provides the information
     # required to make a sensible move
     game_info = bot_battle.get_game_info()
-    print(game_info.remaining_moves)
 
-    # Feel free to uncomment these lines if you want to inspect the info!
-    print(game_info, flush = True)
-    print("", flush = True)
+    #           print(game_info.remaining_moves)
+    #           print(game_info, flush = True)
+    #           print("", flush = True)
 
     # How to detect whether it is a new round
     new_round = prev_round_num != game_info.round_num
     if new_round:
-        print(f"Round {game_info.round_num}\n\n")
+        
+        print(f"\nRound #{game_info.round_num}\n")
+        sillyOuput(game_info)
         prev_round_num = game_info.round_num
 
     # Now let's go through a very simple (and poorly written!)
