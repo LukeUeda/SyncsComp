@@ -8,47 +8,7 @@ bot_battle = BotBattle()
 PET_BLACKLIST = []
 FOOD_BLACKLIST = []
 
-POSITION_1_PRIORITY = [
-    PetType.ELEPHANT,
-    PetType.CAMEL,
-    PetType.PEACOCK,
-    PetType.BISON,
-    PetType.MOSQUITO,
-    PetType.FLAMINGO,
-    PetType.HEDGEHOG,
-    PetType.CRICKET
-]
 
-POSITION_2_PRIORITY = [
-    PetType.PEACOCK,
-    PetType.CAMEL,
-    PetType.GIRAFFE,
-    PetType.DODO,
-    PetType.CRICKET
-]
-
-POSITION_3_PRIORITY = [
-    PetType.KANGAROO,
-    PetType.GIRAFFE,
-    PetType.HIPPO,
-]
-
-POSITION_4_PRIORITY = [
-    PetType.SKUNK,
-    PetType.PENGUIN,
-    PetType.BUNNY,
-    PetType.BLOWFISH,
-]
-
-POSITION_5_PRIORITY = [
-    PetType.DOG,
-    PetType.BLOWFISH,
-    PetType.HORSE,
-    PetType.PENGUIN,
-    PetType.BUNNY
-]
-
-PRIORITIES = [POSITION_1_PRIORITY, POSITION_2_PRIORITY, POSITION_3_PRIORITY, POSITION_4_PRIORITY, POSITION_5_PRIORITY]
 
 def sillyOuput(game_info):
     print(f"\nRound #{game_info.round_num}\n")
@@ -338,21 +298,6 @@ class SillyBot():
         bot_battle.end_turn()
         self.getGameInfo()
 
-    def chooseIdealUnitForPosition(self, position_index):
-        prioritized_pet = None
-        current_max_p_val = -1
-        priorities = PRIORITIES[position_index]
-
-        for i in range(0, 5):
-            pet = self.game_info.player_info.pets[i]
-            if pet != None:
-                priority_val = priorities.index(pet.type) if pet.type in priorities else 100
-                if current_max_p_val == -1 or priority_val < current_max_p_val:
-                    current_max_p_val = priority_val
-                    prioritized_pet = pet
-
-        return prioritized_pet, current_max_p_val
-
 sg_bot = SillyBot()
 
 while True:
@@ -387,7 +332,6 @@ while True:
             worst_pet, worst_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
             best_shop_pet, best_shop_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
 
-        if sg_bot.current_round > 6:
         # Over each food class, the shop foods are applied appropriately
         # Each loop has a very similar structure:
 
@@ -407,56 +351,49 @@ while True:
         # If item_index reaches the length of food_consumed, all food items have
         # been considered, hence the loop breaks with this condition.
 
+        food_consumed = sg_bot.getFoodConsumed()
+        item_index = 0
+        while food_consumed != [] and item_index != len(food_consumed):
+            food_item = food_consumed[item_index]
+            target_pet = sg_bot.getPetMaxStatSum()[1]
+            if target_pet != None and sg_bot.coinCountCheck(food_item[1].cost):
+                sg_bot.buyFood(food_item[1], target_pet)
+            else:
+                if food_item[1].type == FoodType.PEAR:
+                    sg_bot.freezeFood(food_item[1])
+                item_index += 1
             food_consumed = sg_bot.getFoodConsumed()
-            item_index = 0
-            while food_consumed != [] and item_index != len(food_consumed):
-                food_item = food_consumed[item_index]
-                target_pet = sg_bot.getPetMaxStatSum()[1]
-                if target_pet != None and sg_bot.coinCountCheck(food_item[1].cost):
-                    sg_bot.buyFood(food_item[1], target_pet)
-                else:
-                    if food_item[1].type == FoodType.PEAR:
-                        sg_bot.freezeFood(food_item[1])
-                    item_index += 1
-                food_consumed = sg_bot.getFoodConsumed()
 
 
+        food_held = sg_bot.getFoodHeld()
+        item_index = 0
+        while food_held != [] and item_index != len(food_held):
+            food_item = food_held[item_index]
+            target_pet = sg_bot.getFirstPetWithoutHeldFood()
+            if(target_pet != None and sg_bot.coinCountCheck(food_item[1].cost)):
+                sg_bot.buyFood(food_item[1], target_pet)
+            else:
+                item_index += 1  
             food_held = sg_bot.getFoodHeld()
-            item_index = 0
-            while food_held != [] and item_index != len(food_held):
-                food_item = food_held[item_index]
-                target_pet = sg_bot.getFirstPetWithoutHeldFood()
-                if(target_pet != None and sg_bot.coinCountCheck(food_item[1].cost)):
-                    sg_bot.buyFood(food_item[1], target_pet)
-                else:
-                    item_index += 1  
-                food_held = sg_bot.getFoodHeld()
 
 
-            food_temporary = sg_bot.getFoodTemporary()
-            item_index = 0
-            while food_temporary != [] and item_index != len(food_temporary):
-                food_item = food_temporary[item_index]
-                if sg_bot.coinCountCheck(food_item[1].cost):
-                    if(food_item[1].type == FoodType.CUPCAKE):
-                        target_pet = sg_bot.getPetMaxStatSum()[1]
-                        if(target_pet != None):
-                            sg_bot.buyFood(food_item[1], target_pet)
-                        else:
-                            item_index += 1 
+        food_temporary = sg_bot.getFoodTemporary()
+        item_index = 0
+        while food_temporary != [] and item_index != len(food_temporary):
+            food_item = food_temporary[item_index]
+            if sg_bot.coinCountCheck(food_item[1].cost):
+                if(food_item[1].type == FoodType.CUPCAKE):
+                    target_pet = sg_bot.getPetMaxStatSum()[1]
+                    if(target_pet != None):
+                        sg_bot.buyFood(food_item[1], target_pet)
                     else:
-                        sg_bot.buyFood(food_item[1])
+                        item_index += 1 
                 else:
-                    item_index += 1 
-                food_temporary = sg_bot.getFoodTemporary()
+                    sg_bot.buyFood(food_item[1])
+            else:
+                item_index += 1 
+            food_temporary = sg_bot.getFoodTemporary()
 
         if sg_bot.coinCountCheck(1):
             sg_bot.reroll()
-
-    for i in range(0, 5):
-        p_pet, p_val = sg_bot.chooseIdealUnitForPosition(i)
-        if p_pet != None:
-            print(f"Ideal for position {i} is " + str(p_pet.type)[8:] + f" with a priority value of {p_val}.\n", flush=True)
-        else:
-            print("There are no pets hmmmmmmmmmmmmmm", flush=True)
     sg_bot.endTurn()

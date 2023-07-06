@@ -1,0 +1,45 @@
+Game Notes:
+    There are no "Friend Faints" abilities
+    Hippo is the only "Knock Out" pet
+    Fish is the only "Level Up" pet
+
+    Giraffe and Penguin are permanent scaling type pets (end turn abilities)
+    Bunny can also be considered permanent scaling (additional buffs with food)
+
+    Bison can be strong if ability can be triggered (Maybe prioritize if fish shows up often in early game)
+
+    Flamingo and ant are only pets that directly buff others on faint.
+
+    Crab is Crab
+
+    Kangaroo gains huge buffs with either tanky unit in front or strong summons (pairs well with buffed camel)
+
+    Dolphin and mosquito do damage on round begin.
+
+    Dog is late game carry for summon build (No Shark), with a buff on friend summoned
+    Summon pets are cricket, spider and sheep (No deer or whale)
+
+    Money related pets are pig, swan and squirrel (Discount or additional coins)
+
+    Sell type pets are only pig and beaver
+
+    Pets that can hurt friendlies are elephant, badger and hedgehog
+    Pets with on hurt abilities include blowfish, camel, and peacock
+
+    Horse is only pet that buffs summoned friendlies
+
+    --> Skunk may be useful for opponents who build around a single strong unit.
+
+    Hurt builds are plausible (hedgehog, badger, blowfish with honey combo)
+
+    Buffing Dodo in turn can buff other units
+
+    
+
+
+
+
+
+
+
+
