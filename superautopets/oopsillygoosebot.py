@@ -2,13 +2,21 @@ from submissionhelper.botbattle import BotBattle
 from submissionhelper.info.gameinfo import GameInfo
 from submissionhelper.info.pettype import PetType
 from submissionhelper.info.foodtype import FoodType
+from submissionhelper.info.shoppetinfo import ShopPetInfo
+from submissionhelper.info.playerpetinfo import PlayerPetInfo
 
 bot_battle = BotBattle()
 
 PET_BLACKLIST = []
 FOOD_BLACKLIST = []
 
+SUMMONER_BONUS = 5
 
+HORSE_EMPTY_BONUS = 10
+FISH_LEVEL_UP_BONUS = 5
+
+TIER_ONE_REROLL_THRESHOLD = 6
+TIER_ONE_FREEZE_THRESHOLD = 9
 
 def sillyOuput(game_info):
     print(f"\nRound #{game_info.round_num}\n")
@@ -81,9 +89,7 @@ class SillyBot():
         for shop_pet in self.game_info.player_info.shop_pets:
             for i, pet in enumerate(self.game_info.player_info.pets):
                 if pet == None and shop_pet.cost <= self.game_info.player_info.coins and shop_pet.type not in PET_BLACKLIST:
-                    print("Buying", shop_pet.id, " at position", i)
-                    bot_battle.buy_pet(shop_pet, i)
-                    self.getGameInfo()
+                    self.buyPet(shop_pet, i)
                     return True
                 
         return False
@@ -95,9 +101,7 @@ class SillyBot():
         for shop_pet in self.game_info.player_info.shop_pets:
             for i, pet in reversed(list(enumerate(self.game_info.player_info.pets))): # Iterate through pets backwards while maintaining original indecies.
                 if pet == None and shop_pet.cost <= self.game_info.player_info.coins and shop_pet.type not in PET_BLACKLIST:
-                    print("Buying", shop_pet.id, " at position", i)
-                    bot_battle.buy_pet(shop_pet, i)
-                    self.getGameInfo()
+                    self.buyPet(shop_pet, i)
                     return True
                 
         return False
@@ -107,9 +111,7 @@ class SillyBot():
         # or the shop is empty, function returns false. Otherwise the first empty spot found will be filled and return true.
         for i, pet in enumerate(self.game_info.player_info.pets):
             if pet == None and shop_pet.cost <= self.game_info.player_info.coins and shop_pet.type not in PET_BLACKLIST:
-                print("Buying", shop_pet.id, " at position", i)
-                bot_battle.buy_pet(shop_pet, i)
-                self.getGameInfo()
+                self.buyPet(shop_pet, i)
                 return True
                 
         return False
@@ -119,9 +121,7 @@ class SillyBot():
         # or the shop is empty, function returns false. Otherwise the first empty spot found will be filled and return true.
         for i, pet in reversed(list(enumerate(self.game_info.player_info.pets))):
             if pet == None and shop_pet.cost <= self.game_info.player_info.coins and shop_pet.type not in PET_BLACKLIST:
-                print("Buying", shop_pet.id, " at position", i)
-                bot_battle.buy_pet(shop_pet, i)
-                self.getGameInfo()
+                self.buyPet(shop_pet, i)
                 return True
                 
         return False
@@ -131,9 +131,7 @@ class SillyBot():
         # Otherwise purchase the first shop pet and return true.
         for shop_pet in self.game_info.player_info.shop_pets:
             if self.game_info.player_info.pets[index] == None and shop_pet.cost <= self.game_info.player_info.coins and shop_pet.type not in PET_BLACKLIST:
-                print("Buying", shop_pet.id, " at position", i)
-                bot_battle.buy_pet(shop_pet, index)
-                self.getGameInfo()
+                self.buyPet(shop_pet, index)
                 return True
                 
         return False
@@ -151,7 +149,9 @@ class SillyBot():
         # Otherwise if the spot is empty purchase the selected shop pet and return true.
         # If the spot is occupied, sell the pet and purchase.
         if shop_pet.cost <= self.game_info.player_info.coins:
-            if self.game_info.player_info.shop_pets[index] == None:
+            if self.game_info.player_info.pets[index] == None:
+                print("Buying ", shop_pet.type, " at position", index, flush=True)
+                print(self.game_info.player_info.shop_pets)
                 bot_battle.buy_pet(shop_pet, index)
                 self.getGameInfo()
                 return True
@@ -160,8 +160,9 @@ class SillyBot():
                     bot_battle.end_turn()
                     self.getGameInfo()
                     return False
-
-                bot_battle.sell_pet(self.game_info.player_info.shop_pets[index])
+                
+                print("Replacing ", self.game_info.player_info.pets[index].type, " with ",shop_pet.type, " at position", index, flush=True)
+                bot_battle.sell_pet(self.game_info.player_info.pets[index])
                 self.getGameInfo()
 
                 bot_battle.buy_pet(shop_pet, index)
@@ -278,18 +279,24 @@ class SillyBot():
             return True
         return False
     
-    def freezePet(self, shop_pet):
+    def freeze(self, shop_item):
         # Freezes shop pets after making sure they aren't already frozen
-        if not shop_pet.is_frozen :
-            bot_battle.freeze_pet(shop_pet)
+        if not shop_item.is_frozen :
+            if type(shop_item) == ShopPetInfo:
+                bot_battle.freeze_pet(shop_item)
+            else:
+                bot_battle.freeze_food(shop_item)
             self.getGameInfo()
             return True
         return False
     
-    def freezeFood(self, shop_food):
-        # Im sure u get the idea.
-        if not shop_food.is_frozen :
-            bot_battle.freeze_food(shop_food)
+    def unfreeze(self, shop_item):
+        # Freezes shop pets after making sure they aren't already frozen
+        if shop_item.is_frozen :
+            if type(shop_item) == ShopPetInfo:
+                bot_battle.unfreeze_pet(shop_item)
+            else:
+                bot_battle.unfreeze_food(shop_item)
             self.getGameInfo()
             return True
         return False
@@ -298,102 +305,304 @@ class SillyBot():
         bot_battle.end_turn()
         self.getGameInfo()
 
+    def ownsPet(self, pet_type):
+        for pet in self.game_info.player_info.pets:
+            if pet != None:
+                if pet.type == pet_type:
+                    return True
+        return False
+    
+    def shopHasPet(self, pet_type):
+        for shop_pet in self.game_info.player_info.shop_pets:
+            if shop_pet.type == pet_type:
+                return True
+        return False
+    
+    def emptySpaceCount(self):
+        count = 0
+        for pet in self.game_info.player_info.pets:
+            if pet == None:
+                count += 1
+        return count
+
+    def findBestTierOneShopPet(self):
+        best_pet_score = 0
+        best_pet = None
+        for shop_pet in self.game_info.player_info.shop_pets:
+            current_pet_score = self.getTierOneScore(shop_pet)
+            print(shop_pet.type, " has a score of ", current_pet_score, flush=True)
+            if current_pet_score >= best_pet_score:
+                best_pet_score = current_pet_score
+                best_pet = shop_pet
+
+        return best_pet, best_pet_score
+    
+    def findWorstTierOneOwnedPet(self):
+        worst_pet_score = 300
+        worst_pet = None
+        for pet in self.game_info.player_info.pets:
+            current_pet_score = self.getTierOneScore(pet)
+            if current_pet_score > worst_pet_score:
+                worst_pet_score = current_pet_score
+                worst_pet = pet
+
+        return worst_pet, worst_pet_score
+
+    def getTierOneScore(self, pet):
+        score = pet.health + pet.attack
+        # CONSIDERING HORSE
+        if pet.type == PetType.HORSE:
+            if self.ownsPet(PetType.CRICKET) or self.shopHasPet(PetType.CRICKET):
+                score += SUMMONER_BONUS
+            
+            if self.emptySpaceCount() >= 3 and self.game_info.player_info.coins >= 6:
+                score += HORSE_EMPTY_BONUS
+
+        # CONSIDERING CRICKET
+        if pet.type == PetType.CRICKET:
+            if self.ownsPet(PetType.HORSE) or self.shopHasPet(PetType.HORSE):
+                score += SUMMONER_BONUS
+        
+        # CONSIDERING FISH
+        if pet.type == PetType.FISH:
+            if self.ownsPet(PetType.FISH) or self.shopHasPet(PetType.FISH):
+                score += FISH_LEVEL_UP_BONUS
+        
+        return score
+
+    def buyInBestEmptyTierOnePosition(self, shop_pet):
+        # Buys the given shop pet at the best position for that type
+        if shop_pet.type == PetType.HORSE:
+            self.fillLastEmptySpotWithSelected(shop_pet)
+        else:
+            self.fillFirstEmptySpotWithSelected(shop_pet)
+
+    def getOwnedCombinations(self):
+        pairs = []
+        for i, pet_i in enumerate(self.game_info.player_info.pets):
+            for j, pet_j in enumerate(self.game_info.player_info.pets):
+                if j > i and pet_i.type == pet_j.type and pet_i.level != 3 and pet_j.level != 3:
+                    pairs.append([pet_i, pet_j])
+        return pairs
+
+    def getPet(self, pet_type):
+        max_sub_level = 0
+        max_level_pet = None
+        for i, pet in enumerate(self.game_info.player_info.pets):
+            if pet.type == pet_type and pet.sub_level >= max_sub_level:
+                max_level_pet = pet
+        
+        return max_level_pet, i
+
+    def levelUpPet(self, target_pet, secondary_pet):
+        if target_pet.level != 3 and secondary_pet.level != 3 and target_pet.type == secondary_pet.type:
+            if type(secondary_pet) == PlayerPetInfo:
+                bot_battle.level_pet_from_pets(target_pet, secondary_pet)
+                self.getGameInfo()
+            else:
+                bot_battle.level_pet_from_shop(target_pet, secondary_pet)
+                self.getGameInfo()
+            return True
+        return False
+
+
+    def petsPurchaseable(self):
+        # Returns number of pets that could be bought with funds
+        return self.game_info.player_info.coins//3
+    
+    def petsPurchasableAfterReroll(self):
+        # Returns the number of pets that could possibly bought with the remaining
+        # funds if a reroll occurs
+        return (self.game_info.player_info.coins - 1)//3
+    
+    def petsPurchasableChangesOnReroll(self):
+        # Returns true if the number of pets that can be purchased reduces on reroll
+        # Otherwise returns false
+        return self.petsPurchasableAfterReroll() != self.petsPurchaseable()
+    
+    def unfreezeAll(self):
+        for i in range(0, len(self.game_info.player_info.shop_pets)):
+            self.unfreeze(self.game_info.player_info.shop_pets[i])
+        
+        for i in range(0, len(self.game_info.player_info.shop_foods)):
+            self.unfreeze(self.game_info.player_info.shop_foods[i])
+
+    def performBestTierOneOption(self):
+        # This is our tier one strategy. A move or series of moves will be performed which represents
+        # our best possible option in the current situation.
+
+        # If the turn has started, unfreeze all to refresh
+        if self.game_info.remaining_moves == 30:
+            self.unfreezeAll()
+
+        # best shop pet and its score
+        b_shop_pet, b_shop_pet_score = self.findBestTierOneShopPet()
+        if(b_shop_pet != None):
+            print("My best shop pet is ", b_shop_pet.type, flush=True)
+
+        # When there are empty spaces
+        if self.emptySpaceCount() > 0:
+            if self.petsPurchaseable() != 0:
+                # If a pet can be purchased...
+                can_be_rerolled = self.petsPurchasableAfterReroll() >= self.emptySpaceCount() or not self.petsPurchasableChangesOnReroll()
+                if b_shop_pet_score < TIER_ONE_REROLL_THRESHOLD and can_be_rerolled:
+                    # ... but there are no good pets, reroll if there will be enough funds to buy
+                    # a sufficient number of pets
+                    self.reroll()
+                else:
+                    # ... and there is a good one, buy it
+                    print("Since I still have empty spaces and the best pet is ", b_shop_pet.type, ", I'll buy it", flush=True)
+                    self.buyInBestEmptyTierOnePosition(b_shop_pet)
+            else:
+                # If a pet cannot be purchased, freeze pets that exceed the freeze threshold
+                print("I can't afford any pets, so I'll freeze the best ones and reroll if possible", flush=True)
+                for shop_pet in self.game_info.player_info.shop_pets:
+                    if self.getTierOneScore(shop_pet) > TIER_ONE_FREEZE_THRESHOLD:
+                        self.freeze(shop_pet)
+
+                # Reroll if possible (Method will check)
+                self.reroll()
+        else:
+            # When there are no empty spaces, see if the best pet exceeds the reroll threshold
+            if b_shop_pet_score > TIER_ONE_REROLL_THRESHOLD:
+                if self.getOwnedCombinations() != []:
+                    # If two owned pets can be combined, combine them and buy the shop pet if funds are available
+                    if self.coinCountCheck(b_shop_pet.cost):
+                        pet_i, pet_j = self.getOwnedCombinations()[0]
+                        print("Imma combine two", pet_i.type, "'s I have", flush=True)
+                        self.levelUpPet(pet_i, pet_j)
+                        b_shop_pet, b_shop_pet_score = self.findBestTierOneShopPet()
+                        self.fillFirstEmptySpotWithSelected(b_shop_pet)
+                    else:
+                        print(self.game_info.player_info.shop_pets, flush=True)
+                        for i in range(0, len(self.game_info.player_info.shop_pets)):
+                            if self.getTierOneScore(self.game_info.player_info.shop_pets[i]) > TIER_ONE_FREEZE_THRESHOLD:
+                                self.freeze(self.game_info.player_info.shop_pets[i])
+                        self.reroll()
+
+                elif self.ownsPet(b_shop_pet):
+                    # Otherwise if the shop pet can level up an owned pet, do it!!!
+                    target_pet = self.getPet(b_shop_pet.type)
+                    if target_pet.level != 3:
+                        if self.coinCountCheck(b_shop_pet.cost):
+                            print("Imma combine", target_pet.type, " with the shop pet I have", flush=True)
+                            self.levelUpPet(target_pet, b_shop_pet)
+                        else:
+                            for i in range(0, len(self.game_info.player_info.shop_pets)):
+                                if self.getTierOneScore(self.game_info.player_info.shop_pets[i]) > TIER_ONE_FREEZE_THRESHOLD:
+                                    self.freeze(self.game_info.player_info.shop_pets[i])
+                            self.reroll()
+
+                elif self.findWorstTierOneOwnedPet()[1] < b_shop_pet_score:
+                    # Finally, if there is a pet with a worst score than the shop and the pet can be afforded, buy it
+                    if self.coinCountCheck(b_shop_pet.cost):
+                        print(self.findWorstTierOneOwnedPet()[0].type, " is worse than", pet_i.type, " so Imma replace it", flush=True)
+                        self.buyPet(b_shop_pet, self.game_info.player_info.pets.index(self.findWorstTierOneOwnedPet()[0]))
+                    else:
+                        for i in range(0, len(self.game_info.player_info.shop_pets)):
+                            if self.getTierOneScore(self.game_info.player_info.shop_pets[i]) > TIER_ONE_FREEZE_THRESHOLD:
+                                self.freeze(self.game_info.player_info.shop_pets[i])
+                        self.reroll()
+                else:
+                    for i in range(0, len(self.game_info.player_info.shop_pets)):
+                        if self.getTierOneScore(self.game_info.player_info.shop_pets[i]) > TIER_ONE_FREEZE_THRESHOLD:
+                            self.freeze(self.game_info.player_info.shop_pets[i])
+                    self.reroll()
+            else:
+                print("No good options, just gonna reroll", flush=True)
+                self.reroll()
+
+
+
 sg_bot = SillyBot()
 
 while True:
     # If it is a new round, diplsay player info
     if sg_bot.updateRound: 
         sg_bot.displayPlayerInfo()
-
-    # While empty spots are present, attempt to fill them with best shop pet.
-    # Idealy this should only run in the first couple of rounds.
-
-    while sg_bot.hasEmptySpots(): # Break if there are no empty spots
-        best_stat_shop_pet = sg_bot.getShopPetMaxStatSum()[1]
-        if best_stat_shop_pet == None: break # Break if there are no shop pets
-
-        success = sg_bot.fillFirstEmptySpotWithSelected(best_stat_shop_pet)
-        if not success: break # Break if there are insufficient funds
     
     # Keep taking turns while there are still coins
     while sg_bot.coinCountCheck(1):
-        # Consider the best shop pet and the worst owned pet
-        worst_pet_index, worst_pet, worst_pet_stat_sum = sg_bot.getPetMinStatSum()
-        best_shop_pet, best_shop_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
-
-        # While a better pet is in the shop, buy it if possible or freeze it.
-        while best_shop_pet_stat_sum > worst_pet_stat_sum:
-            if sg_bot.coinCountCheck(best_shop_pet.cost - worst_pet.level):
-                sg_bot.buyPet(best_shop_pet, worst_pet_index)
-            else:
-                sg_bot.freezePet(best_shop_pet)
-
-            # Get new best shop pet and worst owned pet
-            worst_pet, worst_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
+        if sg_bot.game_info.round_num <= 6:
+            sg_bot.performBestTierOneOption()
+        else:
+            # Consider the best shop pet and the worst owned pet
+            worst_pet_index, worst_pet, worst_pet_stat_sum = sg_bot.getPetMinStatSum()
             best_shop_pet, best_shop_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
 
-        # Over each food class, the shop foods are applied appropriately
-        # Each loop has a very similar structure:
-
-        # food_consumed is a list of relevant food entries.
-        # item_index is an index of food_consumed.
-
-        # If food_consumed is empty, the shop contains no food
-        # of the consummable type and hence the loop ends
-        
-        # When a food is bought, the size of food_consumed is reduced
-        # leading towards the end of the loop.
-
-        # However, if food is either frozen or not bought, the list remains
-        # the same size. Hence, item_index is used to increment throught
-        # the list.
-
-        # If item_index reaches the length of food_consumed, all food items have
-        # been considered, hence the loop breaks with this condition.
-
-        food_consumed = sg_bot.getFoodConsumed()
-        item_index = 0
-        while food_consumed != [] and item_index != len(food_consumed):
-            food_item = food_consumed[item_index]
-            target_pet = sg_bot.getPetMaxStatSum()[1]
-            if target_pet != None and sg_bot.coinCountCheck(food_item[1].cost):
-                sg_bot.buyFood(food_item[1], target_pet)
-            else:
-                if food_item[1].type == FoodType.PEAR:
-                    sg_bot.freezeFood(food_item[1])
-                item_index += 1
-            food_consumed = sg_bot.getFoodConsumed()
-
-
-        food_held = sg_bot.getFoodHeld()
-        item_index = 0
-        while food_held != [] and item_index != len(food_held):
-            food_item = food_held[item_index]
-            target_pet = sg_bot.getFirstPetWithoutHeldFood()
-            if(target_pet != None and sg_bot.coinCountCheck(food_item[1].cost)):
-                sg_bot.buyFood(food_item[1], target_pet)
-            else:
-                item_index += 1  
-            food_held = sg_bot.getFoodHeld()
-
-
-        food_temporary = sg_bot.getFoodTemporary()
-        item_index = 0
-        while food_temporary != [] and item_index != len(food_temporary):
-            food_item = food_temporary[item_index]
-            if sg_bot.coinCountCheck(food_item[1].cost):
-                if(food_item[1].type == FoodType.CUPCAKE):
-                    target_pet = sg_bot.getPetMaxStatSum()[1]
-                    if(target_pet != None):
-                        sg_bot.buyFood(food_item[1], target_pet)
-                    else:
-                        item_index += 1 
+            # While a better pet is in the shop, buy it if possible or freeze it.
+            while best_shop_pet_stat_sum > worst_pet_stat_sum:
+                if sg_bot.coinCountCheck(best_shop_pet.cost - worst_pet.level):
+                    sg_bot.buyPet(best_shop_pet, worst_pet_index)
                 else:
-                    sg_bot.buyFood(food_item[1])
-            else:
-                item_index += 1 
-            food_temporary = sg_bot.getFoodTemporary()
+                    sg_bot.freeze(best_shop_pet)
 
-        if sg_bot.coinCountCheck(1):
-            sg_bot.reroll()
+                # Get new best shop pet and worst owned pet
+                worst_pet, worst_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
+                best_shop_pet, best_shop_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
+
+            # Over each food class, the shop foods are applied appropriately
+            # Each loop has a very similar structure:
+
+            # food_consumed is a list of relevant food entries.
+            # item_index is an index of food_consumed.
+
+            # If food_consumed is empty, the shop contains no food
+            # of the consummable type and hence the loop ends
+            
+            # When a food is bought, the size of food_consumed is reduced
+            # leading towards the end of the loop.
+
+            # However, if food is either frozen or not bought, the list remains
+            # the same size. Hence, item_index is used to increment throught
+            # the list.
+
+            # If item_index reaches the length of food_consumed, all food items have
+            # been considered, hence the loop breaks with this condition.
+
+            food_consumed = sg_bot.getFoodConsumed()
+            item_index = 0
+            while food_consumed != [] and item_index != len(food_consumed):
+                food_item = food_consumed[item_index]
+                target_pet = sg_bot.getPetMaxStatSum()[1]
+                if target_pet != None and sg_bot.coinCountCheck(food_item[1].cost):
+                    sg_bot.buyFood(food_item[1], target_pet)
+                else:
+                    if food_item[1].type == FoodType.PEAR:
+                        sg_bot.freeze(food_item[1])
+                    item_index += 1
+                food_consumed = sg_bot.getFoodConsumed()
+
+
+            food_held = sg_bot.getFoodHeld()
+            item_index = 0
+            while food_held != [] and item_index != len(food_held):
+                food_item = food_held[item_index]
+                target_pet = sg_bot.getFirstPetWithoutHeldFood()
+                if(target_pet != None and sg_bot.coinCountCheck(food_item[1].cost)):
+                    sg_bot.buyFood(food_item[1], target_pet)
+                else:
+                    item_index += 1  
+                food_held = sg_bot.getFoodHeld()
+
+
+            food_temporary = sg_bot.getFoodTemporary()
+            item_index = 0
+            while food_temporary != [] and item_index != len(food_temporary):
+                food_item = food_temporary[item_index]
+                if sg_bot.coinCountCheck(food_item[1].cost):
+                    if(food_item[1].type == FoodType.CUPCAKE):
+                        target_pet = sg_bot.getPetMaxStatSum()[1]
+                        if(target_pet != None):
+                            sg_bot.buyFood(food_item[1], target_pet)
+                        else:
+                            item_index += 1 
+                    else:
+                        sg_bot.buyFood(food_item[1])
+                else:
+                    item_index += 1 
+                food_temporary = sg_bot.getFoodTemporary()
+
+            if sg_bot.coinCountCheck(1):
+                sg_bot.reroll()
     sg_bot.endTurn()
