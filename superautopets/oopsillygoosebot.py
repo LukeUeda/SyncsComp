@@ -15,8 +15,8 @@ SUMMONER_BONUS = 5
 HORSE_EMPTY_BONUS = 10
 FISH_LEVEL_UP_BONUS = 5
 
-TIER_ONE_REROLL_THRESHOLD = 6
-TIER_ONE_FREEZE_THRESHOLD = 9
+REROLL_THRESHOLD = 5
+FREEZE_THRESHOLD = 7
 
 def sillyOuput(game_info):
     print(f"\nRound #{game_info.round_num}\n")
@@ -151,7 +151,6 @@ class SillyBot():
         if shop_pet.cost <= self.game_info.player_info.coins:
             if self.game_info.player_info.pets[index] == None:
                 print("Buying ", shop_pet.type, " at position", index, flush=True)
-                print(self.game_info.player_info.shop_pets)
                 bot_battle.buy_pet(shop_pet, index)
                 self.getGameInfo()
                 return True
@@ -330,7 +329,17 @@ class SillyBot():
         best_pet = None
         for shop_pet in self.game_info.player_info.shop_pets:
             current_pet_score = self.getTierOneScore(shop_pet)
-            print(shop_pet.type, " has a score of ", current_pet_score, flush=True)
+            if current_pet_score >= best_pet_score:
+                best_pet_score = current_pet_score
+                best_pet = shop_pet
+
+        return best_pet, best_pet_score
+    
+    def findBestTierTwoShopPet(self):
+        best_pet_score = 0
+        best_pet = None
+        for shop_pet in self.game_info.player_info.shop_pets:
+            current_pet_score = self.getTierTwoScore(shop_pet)
             if current_pet_score >= best_pet_score:
                 best_pet_score = current_pet_score
                 best_pet = shop_pet
@@ -342,6 +351,17 @@ class SillyBot():
         worst_pet = None
         for pet in self.game_info.player_info.pets:
             current_pet_score = self.getTierOneScore(pet)
+            if current_pet_score > worst_pet_score:
+                worst_pet_score = current_pet_score
+                worst_pet = pet
+
+        return worst_pet, worst_pet_score
+    
+    def findWorstTierTwoOwnedPet(self):
+        worst_pet_score = 300
+        worst_pet = None
+        for pet in self.game_info.player_info.pets:
+            current_pet_score = self.getTierTwoScore(pet)
             if current_pet_score > worst_pet_score:
                 worst_pet_score = current_pet_score
                 worst_pet = pet
@@ -369,6 +389,33 @@ class SillyBot():
                 score += FISH_LEVEL_UP_BONUS
         
         return score
+    
+    def getTierTwoScore(self, pet):
+        score = 0
+        # CONSIDERING PEACOCK
+        if pet.type == PetType.PEACOCK:
+            score += 10
+            if self.ownsPet(pet):
+                score -= 3
+
+        # CONSIDERING KANGAROO
+        if pet.type == PetType.KANGAROO:
+            score += 10
+
+        if pet.type == PetType.SPIDER:
+            score += 5
+            if self.ownsPet(PetType.HORSE) or self.shopHasPet(PetType.HORSE):
+                score += SUMMONER_BONUS
+
+        if pet.type == PetType.HEDGEHOG:
+            total_health = 0
+            for pet in self.game_info.player_info.pets:
+                if pet != None:
+                    total_health += pet.health
+            if total_health/5 > 2:
+                score += 5
+
+        return score
 
     def buyInBestEmptyTierOnePosition(self, shop_pet):
         # Buys the given shop pet at the best position for that type
@@ -395,14 +442,16 @@ class SillyBot():
         return max_level_pet, i
 
     def levelUpPet(self, target_pet, secondary_pet):
-        if target_pet.level != 3 and secondary_pet.level != 3 and target_pet.type == secondary_pet.type:
+        if target_pet.level != 3 and target_pet.type == secondary_pet.type:
             if type(secondary_pet) == PlayerPetInfo:
-                bot_battle.level_pet_from_pets(target_pet, secondary_pet)
-                self.getGameInfo()
+                if secondary_pet.level != 3:
+                    bot_battle.level_pet_from_pets(secondary_pet, target_pet)
+                    self.getGameInfo()
+                    return True
             else:
-                bot_battle.level_pet_from_shop(target_pet, secondary_pet)
+                bot_battle.level_pet_from_shop(secondary_pet, target_pet)
                 self.getGameInfo()
-            return True
+                return True
         return False
 
 
@@ -427,7 +476,25 @@ class SillyBot():
         for i in range(0, len(self.game_info.player_info.shop_foods)):
             self.unfreeze(self.game_info.player_info.shop_foods[i])
 
-    def performBestTierOneOption(self):
+    def findBestShopPet(self):
+        if self.game_info.round_num < 3:
+            return self.findBestTierOneShopPet()
+        elif self.game_info.round_num < 5:
+            return self.findBestTierTwoShopPet()
+        
+    def getScore(self, pet):
+        if self.game_info.round_num < 3:
+            return self.getTierOneScore(pet)
+        elif self.game_info.round_num < 5:
+            return self.getTierTwoScore(pet)
+
+    def findWorstOwnedPet(self):
+        if self.game_info.round_num < 3:
+            return self.findWorstTierOneOwnedPet()
+        elif self.game_info.round_num < 5:
+            return self.findWorstTierTwoOwnedPet()
+
+    def performBestOption(self):
         # This is our tier one strategy. A move or series of moves will be performed which represents
         # our best possible option in the current situation.
 
@@ -436,7 +503,12 @@ class SillyBot():
             self.unfreezeAll()
 
         # best shop pet and its score
-        b_shop_pet, b_shop_pet_score = self.findBestTierOneShopPet()
+        b_shop_pet, b_shop_pet_score = self.findBestShopPet()
+
+        print("\n\nCurrent Shop: ", flush=True)
+        for shop_pet in self.game_info.player_info.shop_pets:
+            print("  -", shop_pet.type, " has a score of ", self.getScore(shop_pet), flush=True)
+
         if(b_shop_pet != None):
             print("My best shop pet is ", b_shop_pet.type, flush=True)
 
@@ -445,7 +517,7 @@ class SillyBot():
             if self.petsPurchaseable() != 0:
                 # If a pet can be purchased...
                 can_be_rerolled = self.petsPurchasableAfterReroll() >= self.emptySpaceCount() or not self.petsPurchasableChangesOnReroll()
-                if b_shop_pet_score < TIER_ONE_REROLL_THRESHOLD and can_be_rerolled:
+                if b_shop_pet_score < REROLL_THRESHOLD and can_be_rerolled:
                     # ... but there are no good pets, reroll if there will be enough funds to buy
                     # a sufficient number of pets
                     self.reroll()
@@ -457,61 +529,57 @@ class SillyBot():
                 # If a pet cannot be purchased, freeze pets that exceed the freeze threshold
                 print("I can't afford any pets, so I'll freeze the best ones and reroll if possible", flush=True)
                 for shop_pet in self.game_info.player_info.shop_pets:
-                    if self.getTierOneScore(shop_pet) > TIER_ONE_FREEZE_THRESHOLD:
+                    if self.getScore(shop_pet) > FREEZE_THRESHOLD:
                         self.freeze(shop_pet)
 
                 # Reroll if possible (Method will check)
                 self.reroll()
         else:
             # When there are no empty spaces, see if the best pet exceeds the reroll threshold
-            if b_shop_pet_score > TIER_ONE_REROLL_THRESHOLD:
-                if self.getOwnedCombinations() != []:
-                    # If two owned pets can be combined, combine them and buy the shop pet if funds are available
-                    if self.coinCountCheck(b_shop_pet.cost):
-                        pet_i, pet_j = self.getOwnedCombinations()[0]
-                        print("Imma combine two", pet_i.type, "'s I have", flush=True)
-                        self.levelUpPet(pet_i, pet_j)
-                        b_shop_pet, b_shop_pet_score = self.findBestTierOneShopPet()
-                        self.fillFirstEmptySpotWithSelected(b_shop_pet)
-                    else:
-                        print(self.game_info.player_info.shop_pets, flush=True)
-                        for i in range(0, len(self.game_info.player_info.shop_pets)):
-                            if self.getTierOneScore(self.game_info.player_info.shop_pets[i]) > TIER_ONE_FREEZE_THRESHOLD:
-                                self.freeze(self.game_info.player_info.shop_pets[i])
-                        self.reroll()
-
-                elif self.ownsPet(b_shop_pet):
+            if b_shop_pet_score > REROLL_THRESHOLD:
+                if self.ownsPet(b_shop_pet.type):
                     # Otherwise if the shop pet can level up an owned pet, do it!!!
-                    target_pet = self.getPet(b_shop_pet.type)
+                    target_pet, i = self.getPet(b_shop_pet.type)
                     if target_pet.level != 3:
                         if self.coinCountCheck(b_shop_pet.cost):
                             print("Imma combine", target_pet.type, " with the shop pet I have", flush=True)
                             self.levelUpPet(target_pet, b_shop_pet)
                         else:
                             for i in range(0, len(self.game_info.player_info.shop_pets)):
-                                if self.getTierOneScore(self.game_info.player_info.shop_pets[i]) > TIER_ONE_FREEZE_THRESHOLD:
+                                if self.getScore(self.game_info.player_info.shop_pets[i]) > FREEZE_THRESHOLD:
                                     self.freeze(self.game_info.player_info.shop_pets[i])
                             self.reroll()
 
-                elif self.findWorstTierOneOwnedPet()[1] < b_shop_pet_score:
-                    # Finally, if there is a pet with a worst score than the shop and the pet can be afforded, buy it
+                elif self.getOwnedCombinations() != []:
+                    # If two owned pets can be combined, combine them and buy the shop pet if funds are available
                     if self.coinCountCheck(b_shop_pet.cost):
-                        print(self.findWorstTierOneOwnedPet()[0].type, " is worse than", pet_i.type, " so Imma replace it", flush=True)
-                        self.buyPet(b_shop_pet, self.game_info.player_info.pets.index(self.findWorstTierOneOwnedPet()[0]))
+                        pet_i, pet_j = self.getOwnedCombinations()[0]
+                        print("Imma combine two", pet_i.type, "'s I have so I have room to buy the", b_shop_pet.type, flush=True)
+                        self.levelUpPet(pet_i, pet_j)
+                        b_shop_pet, b_shop_pet_score = self.findBestShopPet()
+                        self.fillFirstEmptySpotWithSelected(b_shop_pet)
                     else:
                         for i in range(0, len(self.game_info.player_info.shop_pets)):
-                            if self.getTierOneScore(self.game_info.player_info.shop_pets[i]) > TIER_ONE_FREEZE_THRESHOLD:
+                            if self.getScore(self.game_info.player_info.shop_pets[i]) > FREEZE_THRESHOLD:
+                                self.freeze(self.game_info.player_info.shop_pets[i])
+                        self.reroll()
+
+                elif self.findWorstOwnedPet()[1] < b_shop_pet_score:
+                    # Finally, if there is a pet with a worst score than the shop and the pet can be afforded, buy it
+                    if self.coinCountCheck(b_shop_pet.cost):
+                        print(self.findWorstOwnedPet()[0].type, " is worse than", pet_i.type, " so Imma replace it", flush=True)
+                        self.buyPet(b_shop_pet, self.game_info.player_info.pets.index(self.findWorstOwnedPet()[0]))
+                    else:
+                        for i in range(0, len(self.game_info.player_info.shop_pets)):
+                            if self.getScore(self.game_info.player_info.shop_pets[i]) > FREEZE_THRESHOLD:
                                 self.freeze(self.game_info.player_info.shop_pets[i])
                         self.reroll()
                 else:
-                    for i in range(0, len(self.game_info.player_info.shop_pets)):
-                        if self.getTierOneScore(self.game_info.player_info.shop_pets[i]) > TIER_ONE_FREEZE_THRESHOLD:
-                            self.freeze(self.game_info.player_info.shop_pets[i])
+                    print("The pet is good, but it doesn't beat my other pets")
                     self.reroll()
             else:
                 print("No good options, just gonna reroll", flush=True)
                 self.reroll()
-
 
 
 sg_bot = SillyBot()
@@ -523,8 +591,8 @@ while True:
     
     # Keep taking turns while there are still coins
     while sg_bot.coinCountCheck(1):
-        if sg_bot.game_info.round_num <= 6:
-            sg_bot.performBestTierOneOption()
+        if sg_bot.game_info.round_num < 5:
+            sg_bot.performBestOption()
         else:
             # Consider the best shop pet and the worst owned pet
             worst_pet_index, worst_pet, worst_pet_stat_sum = sg_bot.getPetMinStatSum()
