@@ -561,11 +561,6 @@ class SillyBot():
                         if self.coinCountCheck(b_shop_pet.cost):
                             print("Imma combine", target_pet.type, " with the shop pet I have", flush=True)
                             self.levelUpPet(target_pet, b_shop_pet)
-                        else:
-                            for i in range(0, len(self.game_info.player_info.shop_pets)):
-                                if self.getScore(self.game_info.player_info.shop_pets[i]) > FREEZE_THRESHOLD:
-                                    self.freeze(self.game_info.player_info.shop_pets[i])
-                            self.reroll()
 
                 elif self.getOwnedCombinations() != []:
                     # If two owned pets can be combined, combine them and buy the shop pet if funds are available
@@ -575,25 +570,14 @@ class SillyBot():
                         self.levelUpPet(pet_i, pet_j)
                         b_shop_pet, b_shop_pet_score = self.findBestShopPet()
                         self.fillFirstEmptySpotWithSelected(b_shop_pet)
-                    else:
-                        for i in range(0, len(self.game_info.player_info.shop_pets)):
-                            if self.getScore(self.game_info.player_info.shop_pets[i]) > FREEZE_THRESHOLD:
-                                self.freeze(self.game_info.player_info.shop_pets[i])
-                        self.reroll()
 
                 elif self.findWorstOwnedPet()[1] < b_shop_pet_score:
                     # Finally, if there is a pet with a worst score than the shop and the pet can be afforded, buy it
                     if self.coinCountCheck(b_shop_pet.cost):
                         print(self.findWorstOwnedPet()[0].type, " is worse than", pet_i.type, " so Imma replace it", flush=True)
                         self.buyPet(b_shop_pet, self.game_info.player_info.pets.index(self.findWorstOwnedPet()[0]))
-                    else:
-                        for i in range(0, len(self.game_info.player_info.shop_pets)):
-                            if self.getScore(self.game_info.player_info.shop_pets[i]) > FREEZE_THRESHOLD:
-                                self.freeze(self.game_info.player_info.shop_pets[i])
-                        self.reroll()
                 else:
                     print("The pet is good, but it doesn't beat my other pets")
-                    self.reroll()
             else:
                 print("No good options, just gonna reroll", flush=True)
                 self.reroll()
