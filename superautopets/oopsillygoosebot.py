@@ -59,12 +59,25 @@ class SillyBot():
     def __init__(self):
         self.current_round = 0
         self.game_info = bot_battle.get_game_info()
+        self.opponent_tally = {}
 
     def getGameInfo(self):
         self.game_info = bot_battle.get_game_info()
 
     def displayPlayerInfo(self):
         sillyOuput(self.game_info)
+
+    def addOpponentTally(self):
+        for pet in self.game_info.next_opponent_info.pets:
+            if pet != None:
+                if pet.type in self.opponent_tally:
+                    self.opponent_tally[pet.type] += 1
+                else:
+                    self.opponent_tally[pet.type] = 1
+    
+    def displayOpponentTally(self):
+        for entry in self.opponent_tally.items():
+            print("   ",entry[0], ": ", entry[1], flush=True)
 
     def updateRound(self):
         new_round = self.current_round != self.game_info.round_num
@@ -482,6 +495,10 @@ class SillyBot():
         elif self.game_info.round_num < 5:
             return self.findBestTierTwoShopPet()
         
+    def findBestShopFood(self):
+        if self.game_info.round_num < 3:
+            return self.findBestTierOneShopFood()
+
     def getScore(self, pet):
         if self.game_info.round_num < 3:
             return self.getTierOneScore(pet)
@@ -588,6 +605,9 @@ while True:
     # If it is a new round, diplsay player info
     if sg_bot.updateRound: 
         sg_bot.displayPlayerInfo()
+        sg_bot.addOpponentTally()
+        print("Opponent Tally:")
+        sg_bot.displayOpponentTally()
     
     # Keep taking turns while there are still coins
     while sg_bot.coinCountCheck(1):
