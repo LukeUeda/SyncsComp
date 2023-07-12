@@ -560,7 +560,7 @@ class SillyBot():
         best_shop_food_target = None
         for shop_food in self.game_info.player_info.shop_foods:
             current_score, current_target = self. getTierOneShopFoodScore(shop_food)
-            if current_score > best_shop_food_score:
+            if current_score > best_shop_food_score and shop_food.type not in self.shop_ignore_list:
                 if not ignore_frozen or (ignore_frozen and not shop_food.is_frozen):
                     best_shop_food = shop_food
                     best_shop_food_score = current_score
@@ -589,6 +589,8 @@ class SillyBot():
 
         if(b_shop_pet != None):
             print("My best shop pet is ", b_shop_pet.type, flush=True)
+
+        print("Ignored: ", self.shop_ignore_list, flush=True)
 
         # When there are empty spaces
         if self.emptySpaceCount() > 0:
@@ -624,6 +626,8 @@ class SillyBot():
 
                     elif b_shop_pet_score > FREEZE_THRESHOLD and target_pet.level != 3: # If the pet is worth freezing and it can still be used to 
                         self.freeze(shop_pet)
+                        self.shop_ignore_list.append(b_shop_food.type)
+                    else:
                         self.shop_ignore_list.append(b_shop_pet.type)
 
                 elif self.getOwnedCombinations() != []:
@@ -637,6 +641,8 @@ class SillyBot():
                     
                     elif b_shop_pet_score > FREEZE_THRESHOLD:
                         self.freeze(shop_pet)
+                        self.shop_ignore_list.append(b_shop_food.type)
+                    else:
                         self.shop_ignore_list.append(b_shop_pet.type)
 
                 elif self.findWorstOwnedPet()[1] < b_shop_pet_score:
@@ -644,17 +650,19 @@ class SillyBot():
                     if self.coinCountCheck(b_shop_pet.cost):
                         print(self.findWorstOwnedPet()[0].type, " is worse than", pet_i.type, " so Imma replace it", flush=True)
                         self.buyPet(b_shop_pet, self.game_info.player_info.pets.index(self.findWorstOwnedPet()[0]))
-                    elif b_shop_pet_score > FREEZE_THRESHOLD:
-                        self.freeze(shop_pet)
+                    else:
+                        self.shop_ignore_list.append(b_shop_food.type)
                 else:
                     print("The pet is good, but it doesn't beat my other pets")
                     self.shop_ignore_list.append(b_shop_pet.type)
             elif b_shop_food_score > REROLL_THRESHOLD:
                 if self.coinCountCheck(b_shop_food.cost):
-                    b_shop_food, b_shop_food_score, b_shop_food_target = self.findBestShopFood()
                     self.buyFood(b_shop_food, b_shop_food_target)
                 elif b_shop_food_score > FREEZE_THRESHOLD:
                     self.freeze(b_shop_food)
+                    self.shop_ignore_list.append(b_shop_food.type)
+                else:
+                    self.shop_ignore_list.append(b_shop_food.type)
             else:
                 print("No good options, just gonna reroll", flush=True)
                 self.reroll()
