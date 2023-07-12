@@ -178,7 +178,11 @@ class SillyBot():
                 print("Replacing ", self.game_info.player_info.pets[index].type, " with ",shop_pet.type, " at position", index, flush=True)
                 bot_battle.sell_pet(self.game_info.player_info.pets[index])
                 self.getGameInfo()
-
+                for pet in self.game_info.player_info.shop_pets:
+                    if pet != None:
+                        if pet == shop_pet.type:
+                            shop_pet = pet
+                            break
                 bot_battle.buy_pet(shop_pet, index)
                 self.getGameInfo()
                 return True
@@ -363,13 +367,25 @@ class SillyBot():
 
         return best_pet, best_pet_score
     
+    def findBestTierThreeShopPet(self, ignore_frozen = True):
+        best_pet_score = 0
+        best_pet = None
+        for shop_pet in self.game_info.player_info.shop_pets:
+            current_pet_score = self.getTierThreeShopPetScore(shop_pet)
+            if current_pet_score >= best_pet_score and shop_pet.type not in self.shop_ignore_list:
+                if not ignore_frozen or (ignore_frozen and not shop_pet.is_frozen):
+                    best_pet_score = current_pet_score
+                    best_pet = shop_pet
+
+        return best_pet, best_pet_score
+    
     def findWorstTierOneOwnedPet(self):
         worst_pet_score = 300
         worst_pet = None
         for pet in self.game_info.player_info.pets:
             if pet != None:
                 current_pet_score = self.getTierOneShopPetScore(pet)
-                if current_pet_score > worst_pet_score:
+                if current_pet_score < worst_pet_score:
                     worst_pet_score = current_pet_score
                     worst_pet = pet
 
@@ -381,11 +397,24 @@ class SillyBot():
         for pet in self.game_info.player_info.pets:
             if pet != None:
                 current_pet_score = self.getTierTwoShopPetScore(pet)
-                if current_pet_score > worst_pet_score:
+                if current_pet_score < worst_pet_score:
                     worst_pet_score = current_pet_score
                     worst_pet = pet
 
         return worst_pet, worst_pet_score
+        
+    def findWorstTierThreeOwnedPet(self):
+        worst_pet_score = 300
+        worst_pet = None
+        for pet in self.game_info.player_info.pets:
+            if pet != None:
+                current_pet_score = self.getTierThreeShopPetScore(pet)
+                if current_pet_score < worst_pet_score:
+                    worst_pet_score = current_pet_score
+                    worst_pet = pet
+
+        return worst_pet, worst_pet_score
+
 
     def findBestTierOneOwnedPet(self):
         best_pet_score = 0
@@ -434,18 +463,60 @@ class SillyBot():
             score += 10
 
         if pet.type == PetType.SPIDER:
-            score += 5
+            score += 2
             if self.ownsPet(PetType.HORSE) or self.shopHasPet(PetType.HORSE):
                 score += SUMMONER_BONUS
 
         # CONSIDERING HEDGEHOG
         if pet.type == PetType.HEDGEHOG:
             total_health = 0
-            for pet in self.game_info.player_info.pets:
-                if pet != None:
-                    total_health += pet.health
+            for p in self.game_info.player_info.pets:
+                if p != None:
+                    total_health += p.health
             if total_health/5 > 2:
                 score += 5
+
+        # CONSIDERING CRAB
+        if pet.type == PetType.CRAB:
+            max_health = 0
+            for pet in self.game_info.player_info.pets:
+                
+                if pet != None:
+                    if pet.health > max_health:
+                        max_health = pet.health
+                
+                if max_health > 20:
+                    score += 10
+                elif max_health > 15:
+                    score += 5
+                
+
+        return score
+
+    def getTierThreeShopPetScore(self, pet):
+        score = 0
+
+        # CONSIDERING GIRAFFE
+        if pet.type == PetType.GIRAFFE:
+            score += 10
+
+        if pet.type == PetType.BUNNY:
+            score += 7
+            if self.ownsPet(PetType.CRAB):
+                score += 5
+
+        if pet.type == PetType.CAMEL:
+            score += 7
+
+        if pet.type == PetType.ELEPHANT:
+            score += 3
+            if self.ownsPet(PetType.PEACOCK) or self.ownsPet(PetType.CAMEL):
+                score += 4
+
+        if pet.type == PetType.DODO:
+            if self.ownsPet(PetType.CRAB):
+                score += 8
+            
 
         return score
 
@@ -513,6 +584,8 @@ class SillyBot():
             return self.findBestTierOneShopPet(ignore_frozen=ignoreFrozen)
         elif self.game_info.round_num < 5:
             return self.findBestTierTwoShopPet(ignore_frozen=ignoreFrozen)
+        elif self.game_info.round_num < 10:
+            return self.findBestTierThreeShopPet(ignore_frozen=ignoreFrozen)
         else:
             return 0
         
@@ -520,7 +593,7 @@ class SillyBot():
         if self.game_info.round_num < 3:
             return self.findBestTierOneShopFood(ignore_frozen=ignoreFrozen)
         else:
-            return None, 0, None
+            return self.findBestTierOneShopFood(ignore_frozen=ignoreFrozen)#can chnage later        
 
     def getShopFoodScore(self, food):
         if self.game_info.round_num < 3:
@@ -533,22 +606,44 @@ class SillyBot():
             return self.getTierOneShopPetScore(pet)
         elif self.game_info.round_num < 5:
             return self.getTierTwoShopPetScore(pet)
+        elif self.game_info.round_num < 10:
+            return self.getTierThreeShopPetScore(pet)
 
     def findWorstOwnedPet(self):
         if self.game_info.round_num < 3:
             return self.findWorstTierOneOwnedPet()
         elif self.game_info.round_num < 5:
             return self.findWorstTierTwoOwnedPet()
+        elif self.game_info.round_num < 10:
+            return self.findWorstTierThreeOwnedPet()
+
 
     def getTierOneShopFoodScore(self, shop_food):
-        score = 9 - shop_food.cost
+        score = 3
         target = None
 
-        if shop_food.type == FoodType.PEAR:
+        if self.ownsPet(PetType.BUNNY):
+            score += 2
+
+        if shop_food.type == FoodType.PEAR or shop_food.type == FoodType.APPLE:
             score += 2
 
         if shop_food.type in [FoodType.HONEY, FoodType.MEAT_BONE, FoodType.GARLIC]:
             score += 1
+
+        if shop_food.type == FoodType.MEAT_BONE:
+            bestpet = None
+            for pet in self.game_info.player_info.pets:
+                if pet.carried_food == None:
+                    if pet.type == PetType.CRAB:
+                        bestpet = pet   
+                        score += 2
+                    elif pet.health > 15 and pet.attack < 10 and bestpet == None:
+                        bestpet = pet
+
+            target = bestpet
+
+        
 
         target = self.findBestTierOneOwnedPet()[0]
 
@@ -591,6 +686,7 @@ class SillyBot():
             print("My best shop pet is ", b_shop_pet.type, flush=True)
 
         print("Ignored: ", self.shop_ignore_list, flush=True)
+        print("Worst Pet: ", self.findWorstOwnedPet()[1], flush=True)
 
         # When there are empty spaces
         if self.emptySpaceCount() > 0:
@@ -652,15 +748,15 @@ class SillyBot():
                 elif self.findWorstOwnedPet()[1] < b_shop_pet_score:
                     # Finally, if there is a pet with a worst score than the shop and the pet can be afforded, buy it
                     if self.coinCountCheck(b_shop_pet.cost):
-                        print(self.findWorstOwnedPet()[0].type, " is worse than", pet_i.type, " so Imma replace it", flush=True)
+                        print(self.findWorstOwnedPet()[0].type, " is worse than", b_shop_pet.type, " so Imma replace it", flush=True)
                         self.buyPet(b_shop_pet, self.game_info.player_info.pets.index(self.findWorstOwnedPet()[0]))
                     else:
                         print("I can't afford the", b_shop_pet.type, " and its not worth freezing", flush=True)
-                        self.shop_ignore_list.append(b_shop_food.type)
+                        self.shop_ignore_list.append(b_shop_pet.type)
                 else:
                     print("The pet is good, but it doesn't beat my other pets")
                     self.shop_ignore_list.append(b_shop_pet.type)
-            elif b_shop_food_score > REROLL_THRESHOLD:
+            elif b_shop_food_score > REROLL_THRESHOLD and b_shop_food != None:
                 if self.coinCountCheck(b_shop_food.cost):
                     self.buyFood(b_shop_food, b_shop_food_target)
                 elif b_shop_food_score > FREEZE_THRESHOLD:
@@ -686,7 +782,7 @@ while True:
     
     # Keep taking turns while there are still coins
     while sg_bot.coinCountCheck(1):
-        if sg_bot.game_info.round_num < 5:
+        if sg_bot.game_info.round_num < 10:
             sg_bot.performBestOption()
         else:
             # Consider the best shop pet and the worst owned pet
