@@ -629,7 +629,7 @@ class SillyBot():
                         self.freeze(shop_pet)
                         self.shop_ignore_list.append(b_shop_pet.type)
                     else:
-                        print("I can't afford the", target_pet.type, " and its not worth freezing", flush=True)
+                        print("I can't afford the", b_shop_pet.type, " and its not worth freezing", flush=True)
                         self.shop_ignore_list.append(b_shop_pet.type)
 
                 elif self.getOwnedCombinations() != []:
@@ -642,11 +642,11 @@ class SillyBot():
                         self.fillFirstEmptySpotWithSelected(b_shop_pet)
                     
                     elif b_shop_pet_score > FREEZE_THRESHOLD:
-                        print("I can't afford the ", target_pet.type, " but it is worth freezing", flush=True)
+                        print("I can't afford the ", b_shop_pet.type, " but it is worth freezing", flush=True)
                         self.freeze(shop_pet)
                         self.shop_ignore_list.append(b_shop_pet.type)
                     else:
-                        print("I can't afford the", target_pet.type, " and its not worth freezing", flush=True)
+                        print("I can't afford the", b_shop_pet.type, " and its not worth freezing", flush=True)
                         self.shop_ignore_list.append(b_shop_pet.type)
 
                 elif self.findWorstOwnedPet()[1] < b_shop_pet_score:
@@ -655,7 +655,7 @@ class SillyBot():
                         print(self.findWorstOwnedPet()[0].type, " is worse than", pet_i.type, " so Imma replace it", flush=True)
                         self.buyPet(b_shop_pet, self.game_info.player_info.pets.index(self.findWorstOwnedPet()[0]))
                     else:
-                        print("I can't afford the", target_pet.type, " and its not worth freezing", flush=True)
+                        print("I can't afford the", b_shop_pet.type, " and its not worth freezing", flush=True)
                         self.shop_ignore_list.append(b_shop_food.type)
                 else:
                     print("The pet is good, but it doesn't beat my other pets")
