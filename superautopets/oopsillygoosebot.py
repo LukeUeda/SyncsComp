@@ -515,11 +515,11 @@ class SillyBot():
 
         if pet.type == PetType.CRAB:
             max_health = 0
-            for pet in self.game_info.player_info.pets:
+            for p in self.game_info.player_info.pets:
                 
-                if pet != None:
-                    if pet.health > max_health:
-                        max_health = pet.health
+                if p != None:
+                    if p.health > max_health:
+                        max_health = p.health
                 
                 if max_health > 20:
                     score += 10
