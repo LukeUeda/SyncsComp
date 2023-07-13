@@ -732,7 +732,7 @@ class SillyBot():
 
     def getTierOneShopFoodScore(self, shop_food):
         score = 5
-        target = self.findBestTierOneOwnedPet()[0]
+        target = self.findBestOwnedPet()[0]
 
         if self.ownsPet(PetType.BUNNY):
             score += 2
