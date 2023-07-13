@@ -180,9 +180,10 @@ class SillyBot():
                 self.getGameInfo()
                 for pet in self.game_info.player_info.shop_pets:
                     if pet != None:
-                        if pet == shop_pet.type:
+                        if pet.type == shop_pet.type:
                             shop_pet = pet
                             break
+                print(self.game_info.player_info.shop_pets)
                 bot_battle.buy_pet(shop_pet, index)
                 self.getGameInfo()
                 return True
@@ -452,11 +453,15 @@ class SillyBot():
     
     def getTierTwoShopPetScore(self, pet):
         score = 0
+
+        # TIER ONE CONSIDERATION
+        if pet.type == PetType.FISH:
+            if self.ownsPet(PetType.FISH) or self.shopHasPet(PetType.FISH):
+                score += FISH_LEVEL_UP_BONUS
+
         # CONSIDERING PEACOCK
         if pet.type == PetType.PEACOCK:
             score += 10
-            if self.ownsPet(pet):
-                score -= 3
 
         # CONSIDERING KANGAROO
         if pet.type == PetType.KANGAROO:
@@ -496,6 +501,31 @@ class SillyBot():
     def getTierThreeShopPetScore(self, pet):
         score = 0
 
+        # TIER ONE CONSIDERATION
+        if pet.type == PetType.FISH:
+            if self.ownsPet(PetType.FISH) or self.shopHasPet(PetType.FISH):
+                score += FISH_LEVEL_UP_BONUS
+
+        # TIER TWO CONSIDERATIONS
+        if pet.type == PetType.KANGAROO:
+            score += 10
+
+        if pet.type == PetType.PEACOCK:
+            score += 10
+
+        if pet.type == PetType.CRAB:
+            max_health = 0
+            for pet in self.game_info.player_info.pets:
+                
+                if pet != None:
+                    if pet.health > max_health:
+                        max_health = pet.health
+                
+                if max_health > 20:
+                    score += 10
+                elif max_health > 15:
+                    score += 5
+
         # CONSIDERING GIRAFFE
         if pet.type == PetType.GIRAFFE:
             score += 10
@@ -516,8 +546,6 @@ class SillyBot():
         if pet.type == PetType.DODO:
             if self.ownsPet(PetType.CRAB):
                 score += 8
-            
-
         return score
 
     def buyInBestEmptyTierOnePosition(self, shop_pet):
