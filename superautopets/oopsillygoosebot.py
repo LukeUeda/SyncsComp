@@ -13,10 +13,53 @@ FOOD_BLACKLIST = []
 SUMMONER_BONUS = 5
 
 HORSE_EMPTY_BONUS = 10
-FISH_LEVEL_UP_BONUS = 5
+FISH_LEVEL_UP_BONUS = 8
 
 REROLL_THRESHOLD = 5
 FREEZE_THRESHOLD = 7
+
+POSITION_ONE_BLACKLIST = [
+    PetType.BUNNY,
+    PetType.KANGAROO,
+    PetType.GIRAFFE,
+    PetType.CRAB,
+    PetType.HORSE,
+    PetType.DODO,
+    PetType.DOG,
+    PetType.PENGUIN
+]
+
+POSITION_TWO_BLACKLIST = [
+    PetType.BUNNY,
+    PetType.HORSE,
+    PetType.DOG,
+    PetType.PENGUIN
+]
+
+POSITION_THREE_BLACKLIST = [
+    PetType.BUNNY,
+    PetType.HORSE,
+    PetType.DOG,
+    PetType.PENGUIN
+]
+    
+POSITION_FOUR_BLACKLIST = [
+
+]
+    
+POSITION_FIVE_BLACKLIST = [
+    PetType.FLAMINGO,
+    PetType.CAMEL,
+    PetType.ELEPHANT
+]
+
+POSITION_BLACKLIST = [
+    POSITION_ONE_BLACKLIST,
+    POSITION_TWO_BLACKLIST,
+    POSITION_THREE_BLACKLIST,
+    POSITION_FOUR_BLACKLIST,
+    POSITION_FIVE_BLACKLIST
+]
 
 def sillyOuput(game_info):
     print(f"\nRound #{game_info.round_num}\n")
@@ -183,7 +226,6 @@ class SillyBot():
                         if pet.type == shop_pet.type:
                             shop_pet = pet
                             break
-                print(self.game_info.player_info.shop_pets)
                 bot_battle.buy_pet(shop_pet, index)
                 self.getGameInfo()
                 return True
@@ -416,13 +458,36 @@ class SillyBot():
 
         return worst_pet, worst_pet_score
 
-
     def findBestTierOneOwnedPet(self):
         best_pet_score = 0
         best_pet = None
         for pet in self.game_info.player_info.pets:
             if pet != None:
                 current_pet_score = self.getTierOneShopPetScore(pet)
+                if current_pet_score >= best_pet_score:
+                    best_pet_score = current_pet_score
+                    best_pet = pet
+
+        return best_pet, best_pet_score
+
+    def findBestTierTwoOwnedPet(self):
+        best_pet_score = 0
+        best_pet = None
+        for pet in self.game_info.player_info.pets:
+            if pet != None:
+                current_pet_score = self.getTierTwoShopPetScore(pet)
+                if current_pet_score >= best_pet_score:
+                    best_pet_score = current_pet_score
+                    best_pet = pet
+
+        return best_pet, best_pet_score
+
+    def findBestTierThreeOwnedPet(self):
+        best_pet_score = 0
+        best_pet = None
+        for pet in self.game_info.player_info.pets:
+            if pet != None:
+                current_pet_score = self.getTierThreeShopPetScore(pet)
                 if current_pet_score >= best_pet_score:
                     best_pet_score = current_pet_score
                     best_pet = pet
@@ -456,8 +521,9 @@ class SillyBot():
 
         # TIER ONE CONSIDERATION
         if pet.type == PetType.FISH:
-            if self.ownsPet(PetType.FISH) or self.shopHasPet(PetType.FISH):
-                score += FISH_LEVEL_UP_BONUS
+            if self.ownsPet(PetType.FISH):
+                if self.getPet(PetType.FISH)[0].sub_level == 3:
+                    score += FISH_LEVEL_UP_BONUS
 
         # CONSIDERING PEACOCK
         if pet.type == PetType.PEACOCK:
@@ -503,8 +569,9 @@ class SillyBot():
 
         # TIER ONE CONSIDERATION
         if pet.type == PetType.FISH:
-            if self.ownsPet(PetType.FISH) or self.shopHasPet(PetType.FISH):
-                score += FISH_LEVEL_UP_BONUS
+            if self.ownsPet(PetType.FISH):
+                if self.getPet(PetType.FISH)[0].sub_level == 3:
+                    score += FISH_LEVEL_UP_BONUS
 
         # TIER TWO CONSIDERATIONS
         if pet.type == PetType.KANGAROO:
@@ -537,6 +604,8 @@ class SillyBot():
 
         if pet.type == PetType.CAMEL:
             score += 7
+            if self.ownsPet(PetType.KANGAROO):
+                score += 3
 
         if pet.type == PetType.ELEPHANT:
             score += 3
@@ -567,8 +636,9 @@ class SillyBot():
         max_sub_level = 0
         max_level_pet = None
         for i, pet in enumerate(self.game_info.player_info.pets):
-            if pet.type == pet_type and pet.sub_level >= max_sub_level:
-                max_level_pet = pet
+            if pet != None:
+                if pet.type == pet_type and pet.sub_level >= max_sub_level:
+                    max_level_pet = pet
         
         return max_level_pet, i
 
@@ -615,7 +685,7 @@ class SillyBot():
         elif self.game_info.round_num < 10:
             return self.findBestTierThreeShopPet(ignore_frozen=ignoreFrozen)
         else:
-            return 0
+            return self.findBestTierThreeShopPet(ignore_frozen=ignoreFrozen)
         
     def findBestShopFood(self, ignoreFrozen = True):
         if self.game_info.round_num < 3:
@@ -627,7 +697,7 @@ class SillyBot():
         if self.game_info.round_num < 3:
             return self.getTierOneShopFoodScore(food)
         else:
-            return 0
+            return self.getTierOneShopFoodScore(food)
 
     def getShopPetScore(self, pet):
         if self.game_info.round_num < 3:
@@ -635,6 +705,8 @@ class SillyBot():
         elif self.game_info.round_num < 5:
             return self.getTierTwoShopPetScore(pet)
         elif self.game_info.round_num < 10:
+            return self.getTierThreeShopPetScore(pet)
+        else:
             return self.getTierThreeShopPetScore(pet)
 
     def findWorstOwnedPet(self):
@@ -644,11 +716,23 @@ class SillyBot():
             return self.findWorstTierTwoOwnedPet()
         elif self.game_info.round_num < 10:
             return self.findWorstTierThreeOwnedPet()
+        else:
+            return self.findWorstTierThreeOwnedPet()
+        
+    def findBestOwnedPet(self):
+        if self.game_info.round_num < 3:
+            return self.findBestTierOneOwnedPet()
+        elif self.game_info.round_num < 5:
+            return self.findBestTierTwoOwnedPet()
+        elif self.game_info.round_num < 10:
+            return self.findBestTierThreeOwnedPet()
+        else:
+            return self.findBestTierThreeOwnedPet()
 
 
     def getTierOneShopFoodScore(self, shop_food):
-        score = 3
-        target = None
+        score = 5
+        target = self.findBestTierOneOwnedPet()[0]
 
         if self.ownsPet(PetType.BUNNY):
             score += 2
@@ -668,12 +752,25 @@ class SillyBot():
                         score += 2
                     elif pet.health > 15 and pet.attack < 10 and bestpet == None:
                         bestpet = pet
+            if bestpet != None:
+                target = bestpet
+            else:
+                score -= 6
 
-            target = bestpet
+        if shop_food.type == FoodType.GARLIC:
+            bestpet = None
+            for pet in self.game_info.player_info.pets:
+                if pet.carried_food == None:
+                    if pet.type == PetType.PEACOCK:
+                        bestpet = pet   
+                        score += 2
+                    elif pet.health < 15 and pet.attack > 10 and bestpet == None:
+                        bestpet = pet
 
-        
-
-        target = self.findBestTierOneOwnedPet()[0]
+            if bestpet != None:
+                target = bestpet
+            else:
+                score -= 6
 
         return score, target
 
@@ -690,6 +787,96 @@ class SillyBot():
                     best_shop_food_target = current_target
         
         return best_shop_food, best_shop_food_score, best_shop_food_target
+
+    def getIdealPetForPosition(self, pos):
+        candidates = []
+        for i in range(pos, 5):
+            pet = self.game_info.player_info.pets[i]
+            if pet != None:
+                if pet.type not in POSITION_BLACKLIST[pos]:
+                    candidates.append(pet)
+        
+        candidate_types = []
+        print("POSITION ", pos, " CANDIDATES", flush=True)
+        for pet in candidates:
+            print("   -", pet.type, flush=True)
+            candidate_types.append(pet.type)
+
+        if pos == 0:
+            if PetType.ELEPHANT in candidate_types and self.ownsPet(PetType.PEACOCK):
+                return candidates[candidate_types.index(PetType.ELEPHANT)]
+            
+            if PetType.PEACOCK in candidate_types:
+                return candidates[candidate_types.index(PetType.PEACOCK)]
+            
+            if len(candidates) > 0:
+                return candidates[0]
+            else:
+                return None
+        
+        elif pos == 1:
+            if PetType.PEACOCK in candidate_types and self.ownsPet(PetType.ELEPHANT):
+                return candidates[candidate_types.index(PetType.PEACOCK)]
+            
+            if PetType.CAMEL in candidate_types and self.ownsPet(PetType.KANGAROO):
+                return candidates[candidate_types.index(PetType.CAMEL)]
+            
+            if len(candidates) > 0:
+                return candidates[0]
+            else:
+                return None
+            
+        elif pos == 2:
+            if PetType.KANGAROO in candidate_types and self.ownsPet(PetType.CAMEL):
+                return candidates[candidate_types.index(PetType.KANGAROO)]
+            
+            if len(candidates) > 0:
+                return candidates[0]
+            else:
+                return None
+            
+        elif pos == 3:
+            if PetType.GIRAFFE in candidate_types:
+                return candidates[candidate_types.index(PetType.GIRAFFE)]
+
+            if len(candidates) > 0:
+                return candidates[0]
+            else:
+                return None
+            
+        elif pos == 4:
+            if PetType.BUNNY in candidate_types:
+                return candidates[candidate_types.index(PetType.BUNNY)]
+            
+            if PetType.PENGUIN in candidate_types:
+                return candidates[candidate_types.index(PetType.PENGUIN)]
+            
+            if PetType.HORSE in candidate_types:
+                return candidates[candidate_types.index(PetType.HORSE)]
+            
+            if len(candidates) > 0:
+                return candidates[0]
+            else:
+                return None
+        else:
+
+            if len(candidates) > 0:
+                return candidates[0]
+            else:
+                return None
+
+    def repositionPets(self):
+        print("REPOSITIONING:", flush=True)
+        for i in range(0,5):
+            ideal_pet = self.getIdealPetForPosition(i)
+            if ideal_pet != None:
+                ideal_pet_index = self.game_info.player_info.pets.index(ideal_pet)
+                print("For index ", ideal_pet_index, ": ", ideal_pet.type, flush=True)
+                if ideal_pet_index != i:
+                    bot_battle.swap_pets(ideal_pet_index, i)
+                    self.getGameInfo()
+
+
 
     def performBestOption(self):
         # This is our tier one strategy. A move or series of moves will be performed which represents
@@ -810,86 +997,6 @@ while True:
     
     # Keep taking turns while there are still coins
     while sg_bot.coinCountCheck(1):
-        if sg_bot.game_info.round_num < 10:
-            sg_bot.performBestOption()
-        else:
-            # Consider the best shop pet and the worst owned pet
-            worst_pet_index, worst_pet, worst_pet_stat_sum = sg_bot.getPetMinStatSum()
-            best_shop_pet, best_shop_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
-
-            # While a better pet is in the shop, buy it if possible or freeze it.
-            while best_shop_pet_stat_sum > worst_pet_stat_sum:
-                if sg_bot.coinCountCheck(best_shop_pet.cost - worst_pet.level):
-                    sg_bot.buyPet(best_shop_pet, worst_pet_index)
-                else:
-                    sg_bot.freeze(best_shop_pet)
-
-                # Get new best shop pet and worst owned pet
-                worst_pet, worst_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
-                best_shop_pet, best_shop_pet_stat_sum = sg_bot.getPetMinStatSum()[1:]
-
-            # Over each food class, the shop foods are applied appropriately
-            # Each loop has a very similar structure:
-
-            # food_consumed is a list of relevant food entries.
-            # item_index is an index of food_consumed.
-
-            # If food_consumed is empty, the shop contains no food
-            # of the consummable type and hence the loop ends
-            
-            # When a food is bought, the size of food_consumed is reduced
-            # leading towards the end of the loop.
-
-            # However, if food is either frozen or not bought, the list remains
-            # the same size. Hence, item_index is used to increment throught
-            # the list.
-
-            # If item_index reaches the length of food_consumed, all food items have
-            # been considered, hence the loop breaks with this condition.
-
-            food_consumed = sg_bot.getFoodConsumed()
-            item_index = 0
-            while food_consumed != [] and item_index != len(food_consumed):
-                food_item = food_consumed[item_index]
-                target_pet = sg_bot.getPetMaxStatSum()[1]
-                if target_pet != None and sg_bot.coinCountCheck(food_item[1].cost):
-                    sg_bot.buyFood(food_item[1], target_pet)
-                else:
-                    if food_item[1].type == FoodType.PEAR:
-                        sg_bot.freeze(food_item[1])
-                    item_index += 1
-                food_consumed = sg_bot.getFoodConsumed()
-
-
-            food_held = sg_bot.getFoodHeld()
-            item_index = 0
-            while food_held != [] and item_index != len(food_held):
-                food_item = food_held[item_index]
-                target_pet = sg_bot.getFirstPetWithoutHeldFood()
-                if(target_pet != None and sg_bot.coinCountCheck(food_item[1].cost)):
-                    sg_bot.buyFood(food_item[1], target_pet)
-                else:
-                    item_index += 1  
-                food_held = sg_bot.getFoodHeld()
-
-
-            food_temporary = sg_bot.getFoodTemporary()
-            item_index = 0
-            while food_temporary != [] and item_index != len(food_temporary):
-                food_item = food_temporary[item_index]
-                if sg_bot.coinCountCheck(food_item[1].cost):
-                    if(food_item[1].type == FoodType.CUPCAKE):
-                        target_pet = sg_bot.getPetMaxStatSum()[1]
-                        if(target_pet != None):
-                            sg_bot.buyFood(food_item[1], target_pet)
-                        else:
-                            item_index += 1 
-                    else:
-                        sg_bot.buyFood(food_item[1])
-                else:
-                    item_index += 1 
-                food_temporary = sg_bot.getFoodTemporary()
-
-            if sg_bot.coinCountCheck(1):
-                sg_bot.reroll()
+        sg_bot.performBestOption()
+    sg_bot.repositionPets()
     sg_bot.endTurn()
