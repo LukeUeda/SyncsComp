@@ -556,9 +556,9 @@ class SillyBot():
                     if pet.health > max_health:
                         max_health = pet.health
                 
-                if max_health > 20:
+                if max_health > 14:
                     score += 10
-                elif max_health > 15:
+                elif max_health > 8:
                     score += 5
                 
 
@@ -577,6 +577,7 @@ class SillyBot():
         if pet.type == PetType.KANGAROO:
             score += 10
 
+
         if pet.type == PetType.PEACOCK:
             score += 10
 
@@ -593,7 +594,7 @@ class SillyBot():
                 elif max_health > 15:
                     score += 5
 
-        # CONSIDERING GIRAFFE
+        # TIER THREE CONSIDERATIONS
         if pet.type == PetType.GIRAFFE:
             score += 10
 
@@ -608,14 +609,67 @@ class SillyBot():
                 score += 3
 
         if pet.type == PetType.ELEPHANT:
-            score += 3
             if self.ownsPet(PetType.PEACOCK) or self.ownsPet(PetType.CAMEL):
-                score += 4
+                score += 7
 
         if pet.type == PetType.DODO:
             if self.ownsPet(PetType.CRAB):
                 score += 8
         return score
+    
+    def getTierFourShopPetScore(self, pet):
+        score = 0
+
+        # TIER ONE CONSIDERATION
+        if pet.type == PetType.FISH:
+            if self.ownsPet(PetType.FISH):
+                if self.getPet(PetType.FISH)[0].sub_level == 3:
+                    score += FISH_LEVEL_UP_BONUS
+
+        # TIER TWO CONSIDERATIONS
+        if pet.type == PetType.KANGAROO:
+            score += 10
+
+        if pet.type == PetType.CRAB:
+            max_health = 0
+            for p in self.game_info.player_info.pets:
+                
+                if p != None:
+                    if p.health > max_health:
+                        max_health = p.health
+                
+                if max_health > 20:
+                    score += 10
+                elif max_health > 15:
+                    score += 5
+
+        # TIER THREE CONSIDERATIONS
+        if pet.type == PetType.GIRAFFE:
+            score += 10
+
+        if pet.type == PetType.BUNNY:
+            score += 7
+            if self.ownsPet(PetType.CRAB):
+                score += 5
+
+        # TIER FOUR CONSIDERATIONS
+
+        if pet.type == PetType.BISON:
+            for p in self.game_info.player_info.pets:
+                
+                if p != None:
+                    if p.level == 3:
+                        score += 15
+                        
+
+        if pet.type == PetType.Penguin:
+            for p in self.game_info.player_info.pets:
+                if p != None:
+                    if p.level > 1:
+                        score += 7
+
+        return score
+
 
     def buyInBestEmptyTierOnePosition(self, shop_pet):
         # Buys the given shop pet at the best position for that type
