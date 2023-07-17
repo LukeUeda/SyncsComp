@@ -50,7 +50,8 @@ POSITION_FOUR_BLACKLIST = [
 POSITION_FIVE_BLACKLIST = [
     PetType.FLAMINGO,
     PetType.CAMEL,
-    PetType.ELEPHANT
+    PetType.ELEPHANT,
+    PetType.FLAMINGO
 ]
 
 POSITION_BLACKLIST = [
@@ -422,6 +423,19 @@ class SillyBot():
 
         return best_pet, best_pet_score
     
+    def findBestTierFourShopPet(self, ignore_frozen = True):
+        best_pet_score = 0
+        best_pet = None
+        for shop_pet in self.game_info.player_info.shop_pets:
+            current_pet_score = self.getTierFourShopPetScore(shop_pet)
+            if current_pet_score >= best_pet_score and shop_pet.type not in self.shop_ignore_list:
+                if not ignore_frozen or (ignore_frozen and not shop_pet.is_frozen):
+                    best_pet_score = current_pet_score
+                    best_pet = shop_pet
+
+        return best_pet, best_pet_score
+    
+
     def findWorstTierOneOwnedPet(self):
         worst_pet_score = 300
         worst_pet = None
@@ -457,6 +471,19 @@ class SillyBot():
                     worst_pet = pet
 
         return worst_pet, worst_pet_score
+    
+    def findWorstTierFourOwnedPet(self):
+        worst_pet_score = 300
+        worst_pet = None
+        for pet in self.game_info.player_info.pets:
+            if pet != None:
+                current_pet_score = self.getTierFourShopPetScore(pet)
+                if current_pet_score < worst_pet_score:
+                    worst_pet_score = current_pet_score
+                    worst_pet = pet
+
+        return worst_pet, worst_pet_score
+
 
     def findBestTierOneOwnedPet(self):
         best_pet_score = 0
@@ -493,6 +520,19 @@ class SillyBot():
                     best_pet = pet
 
         return best_pet, best_pet_score
+    
+    def findBestTierFourOwnedPet(self):
+        best_pet_score = 0
+        best_pet = None
+        for pet in self.game_info.player_info.pets:
+            if pet != None:
+                current_pet_score = self.getTierFourShopPetScore(pet)
+                if current_pet_score >= best_pet_score:
+                    best_pet_score = current_pet_score
+                    best_pet = pet
+
+        return best_pet, best_pet_score
+
 
     def getTierOneShopPetScore(self, pet):
         score = pet.health + pet.attack
@@ -522,33 +562,44 @@ class SillyBot():
         # TIER ONE CONSIDERATION
         if pet.type == PetType.FISH:
             if self.ownsPet(PetType.FISH):
-                if self.getPet(PetType.FISH)[0].sub_level == 3:
-                    score += FISH_LEVEL_UP_BONUS
+                score += 6
+                if self.getPet(PetType.FISH)[0].level >= 2:
+                    score += FISH_LEVEL_UP_BONUS + self.getPet(PetType.FISH)[0].sub_level
 
         # CONSIDERING PEACOCK
         if pet.type == PetType.PEACOCK:
-            score += 10
+            if type(pet) == PlayerPetInfo:
+                score += 10
+            elif self.ownsPet(PetType.PEACOCK):
+                if self.getPet(PetType.PEACOCK)[0].level == 2:
+                    score = 0
+            else:
+                score += 10
+
+        if pet.type == PetType.FLAMINGO:
+            score += 7
 
         # CONSIDERING KANGAROO
         if pet.type == PetType.KANGAROO:
-            score += 10
+            if type(pet) == PlayerPetInfo:
+                score += 10
+            elif self.ownsPet(PetType.KANGAROO):
+                if self.getPet(PetType.KANGAROO)[0].level == 2:
+                    score = 0
+            else:
+                score += 10
 
         if pet.type == PetType.SPIDER:
-            score += 2
+            score += 3
             if self.ownsPet(PetType.HORSE) or self.shopHasPet(PetType.HORSE):
                 score += SUMMONER_BONUS
 
-        # CONSIDERING HEDGEHOG
-        if pet.type == PetType.HEDGEHOG:
-            total_health = 0
-            for p in self.game_info.player_info.pets:
-                if p != None:
-                    total_health += p.health
-            if total_health/5 > 2:
-                score += 5
-
         # CONSIDERING CRAB
         if pet.type == PetType.CRAB:
+            if self.ownsPet(PetType.CRAB):
+                if self.getPet(PetType.CRAB)[0].level >= 2:
+                    score += 200
+            score += 7
             max_health = 0
             for pet in self.game_info.player_info.pets:
                 
@@ -570,18 +621,40 @@ class SillyBot():
         # TIER ONE CONSIDERATION
         if pet.type == PetType.FISH:
             if self.ownsPet(PetType.FISH):
-                if self.getPet(PetType.FISH)[0].sub_level == 3:
-                    score += FISH_LEVEL_UP_BONUS
+                score += 6
+                if self.getPet(PetType.FISH)[0].level >= 2:
+                    score += FISH_LEVEL_UP_BONUS + self.getPet(PetType.FISH)[0].sub_level
 
         # TIER TWO CONSIDERATIONS
+        if pet.type == PetType.FLAMINGO:
+                score += 3
+
+        if pet.type == PetType.SPIDER:
+            score += 1
         if pet.type == PetType.KANGAROO:
-            score += 10
+            if type(pet) == PlayerPetInfo:
+                score += 10
+            elif self.ownsPet(PetType.KANGAROO):
+                if self.getPet(PetType.KANGAROO)[0].level == 2:
+                    score = 0
+            else:
+                score += 10
 
 
         if pet.type == PetType.PEACOCK:
-            score += 10
+            if type(pet) == PlayerPetInfo:
+                score += 10
+            elif self.ownsPet(PetType.PEACOCK):
+                if self.getPet(PetType.PEACOCK)[0].level == 2:
+                    score = 0
+            else:
+                score += 10
 
         if pet.type == PetType.CRAB:
+            if self.ownsPet(PetType.CRAB):
+                if self.getPet(PetType.CRAB)[0].level >= 2:
+                    score += 200
+            score += 7
             max_health = 0
             for p in self.game_info.player_info.pets:
                 
@@ -602,6 +675,8 @@ class SillyBot():
             score += 7
             if self.ownsPet(PetType.CRAB):
                 score += 5
+            if type(pet) == ShopPetInfo and self.ownsPet(pet.type):
+                score -= 10
 
         if pet.type == PetType.CAMEL:
             score += 7
@@ -613,6 +688,7 @@ class SillyBot():
                 score += 7
 
         if pet.type == PetType.DODO:
+            score += 7
             if self.ownsPet(PetType.CRAB):
                 score += 8
         return score
@@ -622,35 +698,50 @@ class SillyBot():
 
         # TIER ONE CONSIDERATION
         if pet.type == PetType.FISH:
+            score += 3
             if self.ownsPet(PetType.FISH):
-                if self.getPet(PetType.FISH)[0].sub_level == 3:
-                    score += FISH_LEVEL_UP_BONUS
+                if self.getPet(PetType.FISH)[0].level >= 2:
+                    score += FISH_LEVEL_UP_BONUS + self.getPet(PetType.FISH)[0].sub_level
 
         # TIER TWO CONSIDERATIONS
+        if pet.type == PetType.CAMEL:
+            score += 7
+
+        if pet.type == PetType.PEACOCK:
+            if type(pet) == PlayerPetInfo:
+                score += 10
+            elif self.ownsPet(PetType.PEACOCK):
+                if self.getPet(PetType.PEACOCK)[0].level == 2:
+                    score = 0
+            else:
+                score += 10
+
         if pet.type == PetType.KANGAROO:
-            score += 10
+            if type(pet) == PlayerPetInfo:
+                score += 10
+            elif self.ownsPet(PetType.KANGAROO):
+                if self.getPet(PetType.KANGAROO)[0].level == 2:
+                    score = 0
+            else:
+                score += 10
 
         if pet.type == PetType.CRAB:
-            max_health = 0
-            for p in self.game_info.player_info.pets:
-                
-                if p != None:
-                    if p.health > max_health:
-                        max_health = p.health
-                
-                if max_health > 20:
-                    score += 10
-                elif max_health > 15:
-                    score += 5
+            if self.ownsPet(PetType.CRAB):
+                if self.getPet(PetType.CRAB)[0].level >= 2:
+                    score += 200
+            score += 6
+            score += self.getHealthiestPet().health
 
         # TIER THREE CONSIDERATIONS
         if pet.type == PetType.GIRAFFE:
-            score += 10
+            score += 7
 
         if pet.type == PetType.BUNNY:
             score += 7
             if self.ownsPet(PetType.CRAB):
                 score += 5
+            if type(pet) == ShopPetInfo and self.ownsPet(pet.type):
+                score -= 10
 
         # TIER FOUR CONSIDERATIONS
 
@@ -662,11 +753,11 @@ class SillyBot():
                         score += 15
                         
 
-        if pet.type == PetType.Penguin:
+        if pet.type == PetType.PENGUIN:
             for p in self.game_info.player_info.pets:
                 if p != None:
                     if p.level > 1:
-                        score += 7
+                        score += 10
 
         return score
 
@@ -724,6 +815,7 @@ class SillyBot():
         # Otherwise returns false
         return self.petsPurchasableAfterReroll() != self.petsPurchaseable()
     
+
     def unfreezeAll(self):
         for i in range(0, len(self.game_info.player_info.shop_pets)):
             self.unfreeze(self.game_info.player_info.shop_pets[i])
@@ -736,22 +828,24 @@ class SillyBot():
             return self.findBestTierOneShopPet(ignore_frozen=ignoreFrozen)
         elif self.game_info.round_num < 5:
             return self.findBestTierTwoShopPet(ignore_frozen=ignoreFrozen)
-        elif self.game_info.round_num < 10:
+        elif self.game_info.round_num < 7:
             return self.findBestTierThreeShopPet(ignore_frozen=ignoreFrozen)
         else:
-            return self.findBestTierThreeShopPet(ignore_frozen=ignoreFrozen)
+            return self.findBestTierFourShopPet(ignore_frozen=ignoreFrozen)
         
     def findBestShopFood(self, ignoreFrozen = True):
-        if self.game_info.round_num < 3:
-            return self.findBestTierOneShopFood(ignore_frozen=ignoreFrozen)
-        else:
-            return self.findBestTierOneShopFood(ignore_frozen=ignoreFrozen)#can chnage later        
-
-    def getShopFoodScore(self, food):
-        if self.game_info.round_num < 3:
-            return self.getTierOneShopFoodScore(food)
-        else:
-            return self.getTierOneShopFoodScore(food)
+        best_shop_food = None
+        best_shop_food_score = 0
+        best_shop_food_target = None
+        for shop_food in self.game_info.player_info.shop_foods:
+            current_score, current_target = self. getShopFoodScore(shop_food)
+            if current_score > best_shop_food_score and shop_food.type not in self.shop_ignore_list:
+                if not ignoreFrozen or (ignoreFrozen and not shop_food.is_frozen):
+                    best_shop_food = shop_food
+                    best_shop_food_score = current_score
+                    best_shop_food_target = current_target
+        
+        return best_shop_food, best_shop_food_score, best_shop_food_target
 
     def getShopPetScore(self, pet):
         if self.game_info.round_num < 3:
@@ -761,7 +855,7 @@ class SillyBot():
         elif self.game_info.round_num < 10:
             return self.getTierThreeShopPetScore(pet)
         else:
-            return self.getTierThreeShopPetScore(pet)
+            return self.getTierFourShopPetScore(pet)
 
     def findWorstOwnedPet(self):
         if self.game_info.round_num < 3:
@@ -771,7 +865,7 @@ class SillyBot():
         elif self.game_info.round_num < 10:
             return self.findWorstTierThreeOwnedPet()
         else:
-            return self.findWorstTierThreeOwnedPet()
+            return self.findWorstTierFourOwnedPet()
         
     def findBestOwnedPet(self):
         if self.game_info.round_num < 3:
@@ -781,18 +875,39 @@ class SillyBot():
         elif self.game_info.round_num < 10:
             return self.findBestTierThreeOwnedPet()
         else:
-            return self.findBestTierThreeOwnedPet()
+            return self.findBestTierFourOwnedPet()
 
 
-    def getTierOneShopFoodScore(self, shop_food):
+    def getHealthiestPet(self):
+        max_health = 0
+        max_health_pet = None
+        for pet in self.game_info.player_info.pets:
+            if pet != None:
+                if max_health_pet == None or pet.health > max_health:
+                    max_health = pet.health
+                    max_health_pet = pet
+
+        return max_health_pet
+
+
+    def getShopFoodScore(self, shop_food):
         score = 5
         target = self.findBestOwnedPet()[0]
 
-        if self.ownsPet(PetType.BUNNY):
+        if shop_food.type == FoodType.PEAR or shop_food.type == FoodType.APPLE or shop_food.type == FoodType.SALAD_BOWL or shop_food.type == FoodType.CUPCAKE and self.game_info.round_num > 2:
             score += 2
-
-        if shop_food.type == FoodType.PEAR or shop_food.type == FoodType.APPLE:
-            score += 2
+            if self.ownsPet(PetType.PEACOCK) or self.ownsPet(PetType.CAMEL) or self.ownsPet(PetType.CRAB) or self.ownsPet(PetType.DODO):
+                min_stat = 0
+                min_stat_pet = None
+                for pet in self.game_info.player_info.pets:
+                    if pet != None:
+                        if min_stat_pet == None or pet.health + pet.attack < min_stat and pet.type in [PetType.PEACOCK, PetType.CAMEL, PetType.DODO, self.game_info.player_info.pets[self.getPet(PetType.CRAB)[1] - 1].type]:
+                            min_stat_pet = pet
+                            min_stat = pet.health + pet.attack
+                
+                target = min_stat_pet
+            else:
+                score -= 10
 
         if shop_food.type in [FoodType.HONEY, FoodType.MEAT_BONE, FoodType.GARLIC]:
             score += 1
@@ -801,23 +916,21 @@ class SillyBot():
             bestpet = None
             for pet in self.game_info.player_info.pets:
                 if pet.carried_food == None:
-                    if pet.type == PetType.CRAB:
-                        bestpet = pet   
+                    if pet.type == PetType.CRAB: 
                         score += 2
-                    elif pet.health > 15 and pet.attack < 10 and bestpet == None:
+                        return score, pet
+                    elif pet.type not in [PetType.PEACOCK, PetType.HORSE]:
                         bestpet = pet
             if bestpet != None:
                 target = bestpet
-            else:
-                score -= 6
 
         if shop_food.type == FoodType.GARLIC:
             bestpet = None
             for pet in self.game_info.player_info.pets:
                 if pet.carried_food == None:
-                    if pet.type == PetType.PEACOCK:
-                        bestpet = pet   
+                    if pet.type == PetType.PEACOCK: 
                         score += 2
+                        return score, pet
                     elif pet.health < 15 and pet.attack > 10 and bestpet == None:
                         bestpet = pet
 
@@ -827,20 +940,6 @@ class SillyBot():
                 score -= 6
 
         return score, target
-
-    def findBestTierOneShopFood(self, ignore_frozen = True):
-        best_shop_food = None
-        best_shop_food_score = 0
-        best_shop_food_target = None
-        for shop_food in self.game_info.player_info.shop_foods:
-            current_score, current_target = self. getTierOneShopFoodScore(shop_food)
-            if current_score > best_shop_food_score and shop_food.type not in self.shop_ignore_list:
-                if not ignore_frozen or (ignore_frozen and not shop_food.is_frozen):
-                    best_shop_food = shop_food
-                    best_shop_food_score = current_score
-                    best_shop_food_target = current_target
-        
-        return best_shop_food, best_shop_food_score, best_shop_food_target
 
     def getIdealPetForPosition(self, pos):
         candidates = []
@@ -857,6 +956,12 @@ class SillyBot():
             candidate_types.append(pet.type)
 
         if pos == 0:
+            if PetType.CRICKET in candidate_types and self.ownsPet(PetType.HORSE):
+                return candidates[candidate_types.index(PetType.CRICKET)]
+            
+            if PetType.FLAMINGO in candidate_types:
+                return candidates[candidate_types.index(PetType.FLAMINGO)]
+
             if PetType.ELEPHANT in candidate_types and self.ownsPet(PetType.PEACOCK):
                 return candidates[candidate_types.index(PetType.ELEPHANT)]
             
@@ -871,6 +976,15 @@ class SillyBot():
         elif pos == 1:
             if PetType.PEACOCK in candidate_types and self.ownsPet(PetType.ELEPHANT):
                 return candidates[candidate_types.index(PetType.PEACOCK)]
+
+            if PetType.CRAB in candidate_types and self.game_info.player_info.pets[pos - 1] == self.getHealthiestPet():
+                return candidates[candidate_types.index(PetType.CRAB)]
+            elif PetType.CRAB in candidate_types:
+                candidates.pop(candidate_types.index(PetType.CRAB))
+                candidate_types.pop(candidate_types.index(PetType.CRAB))
+
+            if PetType.CRICKET in candidate_types and self.ownsPet(PetType.HORSE):
+                return candidates[candidate_types.index(PetType.CRICKET)]
             
             if PetType.CAMEL in candidate_types and self.ownsPet(PetType.KANGAROO):
                 return candidates[candidate_types.index(PetType.CAMEL)]
@@ -881,6 +995,18 @@ class SillyBot():
                 return None
             
         elif pos == 2:
+            if PetType.CRAB in candidate_types and self.game_info.player_info.pets[pos - 1] == self.getHealthiestPet():
+                return candidates[candidate_types.index(PetType.CRAB)]
+            elif PetType.CRAB in candidate_types:
+                candidates.pop(candidate_types.index(PetType.CRAB))
+                candidate_types.pop(candidate_types.index(PetType.CRAB))
+
+            if PetType.CRICKET in candidate_types and self.ownsPet(PetType.HORSE):
+                return candidates[candidate_types.index(PetType.CRICKET)]
+            
+            if PetType.CAMEL in candidate_types and self.ownsPet(PetType.KANGAROO):
+                return candidates[candidate_types.index(PetType.CAMEL)]
+
             if PetType.KANGAROO in candidate_types and self.ownsPet(PetType.CAMEL):
                 return candidates[candidate_types.index(PetType.KANGAROO)]
             
@@ -890,6 +1016,21 @@ class SillyBot():
                 return None
             
         elif pos == 3:
+            if PetType.CRAB in candidate_types and self.game_info.player_info.pets[pos - 1] == self.getHealthiestPet():
+                return candidates[candidate_types.index(PetType.CRAB)]
+            elif PetType.CRAB in candidate_types:
+                candidates.pop(candidate_types.index(PetType.CRAB))
+                candidate_types.pop(candidate_types.index(PetType.CRAB))
+
+            if PetType.CRICKET in candidate_types and self.ownsPet(PetType.HORSE):
+                return candidates[candidate_types.index(PetType.CRICKET)]
+            
+            if PetType.CAMEL in candidate_types and self.ownsPet(PetType.KANGAROO):
+                return candidates[candidate_types.index(PetType.CAMEL)]
+
+            if PetType.KANGAROO in candidate_types and self.ownsPet(PetType.CAMEL):
+                return candidates[candidate_types.index(PetType.KANGAROO)]
+            
             if PetType.GIRAFFE in candidate_types:
                 return candidates[candidate_types.index(PetType.GIRAFFE)]
 
@@ -899,6 +1040,15 @@ class SillyBot():
                 return None
             
         elif pos == 4:
+            if PetType.CRAB in candidate_types and self.game_info.player_info.pets[pos - 1] == self.getHealthiestPet():
+                return candidates[candidate_types.index(PetType.CRAB)]
+            elif PetType.CRAB in candidate_types:
+                candidates.pop(candidate_types.index(PetType.CRAB))
+                candidate_types.pop(candidate_types.index(PetType.CRAB))
+            
+            if PetType.CRICKET in candidate_types and self.ownsPet(PetType.HORSE):
+                return candidates[candidate_types.index(PetType.CRICKET)]
+            
             if PetType.BUNNY in candidate_types:
                 return candidates[candidate_types.index(PetType.BUNNY)]
             
